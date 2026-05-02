@@ -33,12 +33,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
   <main class="page">
     <header class="topbar">
       <h1 class="title">ゆるっと家計簿</h1>
+      <button type="button" id="helpBtn" class="help-btn" aria-label="使い方">?</button>
       <div class="tabs" role="tablist">
         <button type="button" class="tab is-active" role="tab" aria-selected="true" data-pane="0">書く</button>
         <button type="button" class="tab" role="tab" aria-selected="false" data-pane="1">きろく</button>
@@ -140,6 +141,8 @@
             </div>
           </div>
 
+          <div class="status-bubble is-neutral" id="statusBubble" aria-live="polite">まだ何も書いていないよ</div>
+
           <div class="list-section">
             <h3 class="list-title">きろく</h3>
             <ul id="entryList" class="entry-list"></ul>
@@ -155,6 +158,23 @@
   <div id="toast" class="toast" aria-live="polite"></div>
   <div id="hintPop" class="hint-pop" role="tooltip"></div>
 
-  <script src="app.js?v=6"></script>
+  <div id="helpModal" class="help-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="help-modal__backdrop" id="helpBackdrop"></div>
+    <div class="help-modal__sheet" role="document">
+      <button type="button" class="help-modal__close" id="helpClose" aria-label="閉じる">×</button>
+      <h2 id="helpTitle" class="help-modal__title">使い方</h2>
+      <ol class="help-list">
+        <li><b>金額</b>: チップを押して足し算（+100, +500…）。⌫で1個もどす</li>
+        <li><b>タグ</b>: タップで即書きこむ・長押しで意味のヒント</li>
+        <li><b>ぴったり</b>: テンキー右の小ボタンで +10/+50 の刻みに切替</li>
+        <li><b>ページ移動</b>: 上のタブ、または左右にスワイプ</li>
+        <li><b>上限を決める</b>: 「きろく」で月の予算を設定。超えるとやばい顔</li>
+        <li><b>消す</b>: 記録の × ボタン</li>
+      </ol>
+      <p class="help-modal__note">データはこのブラウザだけに保存されます</p>
+    </div>
+  </div>
+
+  <script src="app.js?v=7"></script>
 </body>
 </html>

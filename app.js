@@ -62,6 +62,11 @@
   const paneViewport = document.querySelector('.pane-viewport');
   const toastEl = document.getElementById('toast');
   const hintPopEl = document.getElementById('hintPop');
+  const statusBubble = document.getElementById('statusBubble');
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const helpClose = document.getElementById('helpClose');
+  const helpBackdrop = document.getElementById('helpBackdrop');
 
   // ─── 初期化 ──────────────────
   const today = new Date();
@@ -145,6 +150,21 @@
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.tag')) hideHint();
     });
+
+    // 使い方モーダル
+    helpBtn.addEventListener('click', openHelp);
+    helpClose.addEventListener('click', closeHelp);
+    helpBackdrop.addEventListener('click', closeHelp);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !helpModal.classList.contains('is-hidden')) closeHelp();
+    });
+  }
+
+  function openHelp() {
+    helpModal.classList.remove('is-hidden');
+  }
+  function closeHelp() {
+    helpModal.classList.add('is-hidden');
   }
 
   // ─── タグ: タップ即保存 + 長押しヒント ──────────────────
@@ -407,6 +427,7 @@
     setLimitState('waste', sums.waste);
 
     renderRatioBar(sums);
+    renderStatusBubble(sums);
 
     const monthly = entries
       .filter((e) => isInMonth(e.date, viewYear, viewMonth))
@@ -458,6 +479,53 @@
     const near = !over && sum >= limit * NEAR_RATIO;
     row.classList.toggle('is-over', over);
     row.classList.toggle('is-near', near);
+  }
+
+  function renderStatusBubble(sums) {
+    const { text, tone } = computeStatus(sums);
+    statusBubble.textContent = text;
+    statusBubble.className = `status-bubble is-${tone}`;
+  }
+
+  function computeStatus(sums) {
+    const total = sums.necessary + sums.enjoy + sums.waste;
+    if (total === 0) {
+      return { text: 'まだ何も書いていないよ', tone: 'neutral' };
+    }
+    // 1) 必要が予算オーバー → 一番アラート
+    if (limits.necessary && sums.necessary > limits.necessary) {
+      return { text: '必要が予算オーバー、引き締めどき', tone: 'alert' };
+    }
+    // 2) ムダが上限超え → 反省ゾーン
+    if (limits.waste && sums.waste > limits.waste) {
+      return { text: '支払う前にもう一考...', tone: 'caution' };
+    }
+    // 3) 楽しみが上限超え
+    if (limits.enjoy && sums.enjoy > limits.enjoy) {
+      return { text: '楽しみすぎかも...', tone: 'caution' };
+    }
+    // 4) ムダ比率が高い (上限なくても警告)
+    if (total >= 1000 && sums.waste / total > 0.25) {
+      return { text: '支払う前にもう一考...', tone: 'caution' };
+    }
+    // 5) どこかが80%以上に近づいてる
+    const nearTags = [];
+    for (const tag of ['necessary', 'enjoy', 'waste']) {
+      if (limits[tag] && sums[tag] >= limits[tag] * NEAR_RATIO) nearTags.push(tag);
+    }
+    if (nearTags.includes('enjoy')) return { text: '楽しみがそろそろ大詰め', tone: 'soft' };
+    if (nearTags.includes('necessary')) return { text: '必要がもうすぐ上限', tone: 'soft' };
+    if (nearTags.includes('waste')) return { text: 'ムダ、もうすぐ上限', tone: 'soft' };
+    // 6) 上限を設定済みで全部余裕 → いい感じ！
+    if (Object.keys(limits).length > 0) {
+      return { text: 'いい感じ！', tone: 'good' };
+    }
+    // 7) 上限なし、ムダ少なめ
+    if (total >= 3000 && sums.waste / total < 0.1) {
+      return { text: 'いい感じ！', tone: 'good' };
+    }
+    // 8) フォールバック
+    return { text: 'ぼちぼちのペース', tone: 'neutral' };
   }
 
   function renderRatioBar(sums) {

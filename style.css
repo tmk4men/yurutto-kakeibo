@@ -57,6 +57,34 @@ input[type="number"], input[type="date"] {
 .topbar {
   flex-shrink: 0;
   padding: 8px 22px 0;
+  position: relative;
+}
+
+.help-btn {
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-soft);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Klee One', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.help-btn:active {
+  background: var(--ink-soft);
+  color: var(--paper);
 }
 
 .title {
@@ -496,6 +524,39 @@ input[type="number"], input[type="date"] {
   font-weight: 600;
 }
 
+/* ─── 状態の吹き出し ─── */
+.status-bubble {
+  position: relative;
+  flex-shrink: 0;
+  margin: 0 4px 8px;
+  background: var(--paper);
+  border: 1.5px solid currentColor;
+  border-radius: 14px;
+  padding: 9px 14px;
+  font-size: 15px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.status-bubble::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 30px;
+  width: 12px;
+  height: 12px;
+  background: var(--paper);
+  border-left: 1.5px solid currentColor;
+  border-top: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.status-bubble.is-neutral { color: var(--ink-soft); }
+.status-bubble.is-good    { color: #5e8c5d; }
+.status-bubble.is-soft    { color: #b88736; }
+.status-bubble.is-caution { color: var(--enjoy); }
+.status-bubble.is-alert   { color: #c5604a; }
+
 /* ─── 一覧 (記録) ─── */
 .list-section {
   flex: 1;
@@ -668,6 +729,89 @@ input[type="number"], input[type="date"] {
 .hint-pop.is-show {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/* ─── 使い方モーダル ─── */
+.help-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.help-modal.is-hidden { display: none; }
+
+.help-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(43, 58, 85, 0.4);
+  cursor: pointer;
+}
+
+.help-modal__sheet {
+  position: relative;
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 20px 22px 16px;
+  max-width: 380px;
+  width: 100%;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(43, 58, 85, 0.3);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 27px,
+    rgba(217, 207, 182, 0.4) 27px,
+    rgba(217, 207, 182, 0.4) 28px
+  );
+}
+
+.help-modal__close {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.help-modal__close:active { background: rgba(43, 58, 85, 0.1); }
+
+.help-modal__title {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 400;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.help-list {
+  margin: 0 0 12px;
+  padding-left: 22px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.help-list li { margin-bottom: 4px; }
+.help-list b { font-weight: 600; color: var(--ink); }
+
+.help-modal__note {
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin: 0;
+  opacity: 0.8;
 }
 
 /* ─── 狭い画面 ─── */
