@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
   <main class="page">
@@ -85,20 +85,45 @@
               <button type="button" id="nextMonth" class="month-arrow" aria-label="次の月">›</button>
             </div>
 
+            <details class="limits-editor" id="limitsEditor">
+              <summary>上限を決める</summary>
+              <div class="limits-grid">
+                <label class="limit-cell">
+                  <span class="limit-cell__label">必要</span>
+                  <input type="number" class="limit-input" inputmode="numeric" min="0" step="100" placeholder="設定なし" data-limit-tag="necessary" />
+                </label>
+                <label class="limit-cell">
+                  <span class="limit-cell__label">楽しみ</span>
+                  <input type="number" class="limit-input" inputmode="numeric" min="0" step="100" placeholder="設定なし" data-limit-tag="enjoy" />
+                </label>
+                <label class="limit-cell">
+                  <span class="limit-cell__label">ムダかも</span>
+                  <input type="number" class="limit-input" inputmode="numeric" min="0" step="100" placeholder="設定なし" data-limit-tag="waste" />
+                </label>
+              </div>
+              <p class="limits-hint">空欄なら上限なし。月をまたいでも設定はそのまま。</p>
+            </details>
+
             <ul class="summary">
-              <li>
+              <li class="summary__row" id="rowNecessary">
                 <span class="sum-label sum-label--necessary">必要</span>
-                <span class="sum-value" id="sumNecessary">¥0</span>
+                <span class="sum-value">
+                  <span id="sumNecessary">¥0</span><span class="sum-limit" id="limitNecessary"></span>
+                </span>
                 <span class="sum-diff" id="diffNecessary"></span>
               </li>
-              <li>
+              <li class="summary__row" id="rowEnjoy">
                 <span class="sum-label sum-label--enjoy">楽しみ</span>
-                <span class="sum-value" id="sumEnjoy">¥0</span>
+                <span class="sum-value">
+                  <span id="sumEnjoy">¥0</span><span class="sum-limit" id="limitEnjoy"></span>
+                </span>
                 <span class="sum-diff" id="diffEnjoy"></span>
               </li>
-              <li>
+              <li class="summary__row" id="rowWaste">
                 <span class="sum-label sum-label--waste">ムダかも</span>
-                <span class="sum-value" id="sumWaste">¥0</span>
+                <span class="sum-value">
+                  <span id="sumWaste">¥0</span><span class="sum-limit" id="limitWaste"></span>
+                </span>
                 <span class="sum-diff" id="diffWaste"></span>
               </li>
             </ul>
@@ -130,6 +155,6 @@
   <div id="toast" class="toast" aria-live="polite"></div>
   <div id="hintPop" class="hint-pop" role="tooltip"></div>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

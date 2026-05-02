@@ -323,19 +323,121 @@ input[type="number"], input[type="date"] {
   -webkit-tap-highlight-color: transparent;
 }
 
+.limits-editor {
+  margin: 0 0 14px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+}
+
+.limits-editor > summary {
+  font-size: 14px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 8px 0;
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.limits-editor > summary::-webkit-details-marker {
+  display: none;
+}
+
+.limits-editor > summary::before {
+  content: '▸ ';
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.limits-editor[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.limits-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.limit-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.limit-cell__label {
+  text-align: center;
+}
+
+.limit-input {
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: 'Klee One', sans-serif;
+  font-size: 16px;
+  color: var(--ink);
+  width: 100%;
+  outline: none;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+
+.limit-input::-webkit-outer-spin-button,
+.limit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.limit-input:focus {
+  border-color: var(--ink-soft);
+}
+
+.limits-hint {
+  font-size: 12px;
+  color: var(--ink-soft);
+  opacity: 0.7;
+  margin: 0 0 8px;
+  text-align: center;
+}
+
 .summary {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.summary li {
+.summary__row {
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: baseline;
   column-gap: 10px;
   padding: 8px 4px;
   border-bottom: 1px dotted var(--line);
+}
+
+.sum-limit {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-left: 4px;
+  font-family: 'Klee One', sans-serif;
+}
+
+.summary__row.is-over .sum-label,
+.summary__row.is-over .sum-value,
+.summary__row.is-over .sum-limit {
+  color: #c5604a;
+}
+
+.summary__row.is-over .sum-limit::after {
+  content: ' 😬';
+}
+
+.summary__row.is-near .sum-limit {
+  color: #b88736;
 }
 
 .sum-label {

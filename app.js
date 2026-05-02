@@ -3,6 +3,8 @@
 
   const STORAGE_KEY = 'kakeibo.entries';
   const GRAIN_KEY = 'kakeibo.grainMode'; // 'coarse' | 'fine'
+  const LIMITS_KEY = 'kakeibo.limits';   // {necessary?: number, enjoy?: number, waste?: number}
+  const NEAR_RATIO = 0.8; // 80%以上で「もうすぐ」
   const TAGS = {
     necessary: '必要',
     enjoy: '楽しみ',
@@ -22,6 +24,7 @@
   let amountHistory = []; // 加算チップの履歴
   let viewYear, viewMonth;
   let grainMode = localStorage.getItem(GRAIN_KEY) === 'fine' ? 'fine' : 'coarse';
+  let limits = loadLimits(); // {necessary, enjoy, waste} — null/undefined は未設定
   let activePane = 0; // 0=書く, 1=きろく
 
   // ─── DOM ──────────────────
@@ -43,6 +46,17 @@
   const ratioBar = document.getElementById('ratioBar');
   const entryList = document.getElementById('entryList');
   const emptyMsg = document.getElementById('emptyMsg');
+  const limitInputs = document.querySelectorAll('.limit-input');
+  const rowEls = {
+    necessary: document.getElementById('rowNecessary'),
+    enjoy: document.getElementById('rowEnjoy'),
+    waste: document.getElementById('rowWaste'),
+  };
+  const limitEls = {
+    necessary: document.getElementById('limitNecessary'),
+    enjoy: document.getElementById('limitEnjoy'),
+    waste: document.getElementById('limitWaste'),
+  };
   const tabButtons = document.querySelectorAll('.tab');
   const panesEl = document.getElementById('panes');
   const paneViewport = document.querySelector('.pane-viewport');
@@ -56,6 +70,7 @@
   dateInput.value = toISODate(today);
 
   renderNumpad();
+  populateLimitInputs();
   bindEvents();
   updateAmountDisplay();
   setActivePane(0, false);
@@ -104,6 +119,23 @@
     nextMonthBtn.addEventListener('click', () => {
       ({ year: viewYear, month: viewMonth } = nextMonth(viewYear, viewMonth));
       render();
+    });
+
+    // 上限の入力
+    limitInputs.forEach((input) => {
+      input.addEventListener('input', () => {
+        const tag = input.dataset.limitTag;
+        const v = parseInt(input.value, 10);
+        if (Number.isFinite(v) && v > 0) {
+          limits = { ...limits, [tag]: v };
+        } else {
+          const next = { ...limits };
+          delete next[tag];
+          limits = next;
+        }
+        saveLimits();
+        render();
+      });
     });
 
     // 横スワイプ
@@ -159,10 +191,22 @@
       showToast('金額を入れて');
       return;
     }
-    saveEntry({ tag, amount });
+    const entryDate = dateInput.value || toISODate(new Date());
+    const [eY, eM] = entryDate.split('-').map(Number);
+    const before = getMonthSums(eY, eM - 1)[tag];
+    saveEntry({ tag, amount, date: entryDate });
     resetForm();
     render();
-    showToast('書いた！');
+
+    const limit = limits[tag];
+    const after = before + amount;
+    if (limit && before <= limit && after > limit) {
+      showToast(`${TAGS[tag]}が上限こえた！😬`, 2400);
+    } else if (limit && after > limit) {
+      showToast(`書いた！(${TAGS[tag]} +¥${(after - limit).toLocaleString('ja-JP')}超え)`, 2000);
+    } else {
+      showToast('書いた！');
+    }
   }
 
   function shakeAmount() {
@@ -178,10 +222,10 @@
     );
   }
 
-  function saveEntry({ tag, amount }) {
+  function saveEntry({ tag, amount, date }) {
     const entry = {
       id: Date.now().toString(),
-      date: dateInput.value || toISODate(new Date()),
+      date: date || dateInput.value || toISODate(new Date()),
       amount,
       tag,
     };
@@ -356,6 +400,10 @@
     setDiff(diffEnjoy, sums.enjoy, prevSums.enjoy);
     setDiff(diffWaste, sums.waste, prevSums.waste);
 
+    setLimitState('necessary', sums.necessary);
+    setLimitState('enjoy', sums.enjoy);
+    setLimitState('waste', sums.waste);
+
     renderRatioBar(sums);
 
     const monthly = entries
@@ -392,6 +440,22 @@
     el.textContent = `先月${sign}${formatYen(Math.abs(d))}`;
     el.classList.toggle('is-up', d > 0);
     el.classList.toggle('is-down', d < 0);
+  }
+
+  function setLimitState(tag, sum) {
+    const row = rowEls[tag];
+    const el = limitEls[tag];
+    const limit = limits[tag];
+    if (!limit || limit <= 0) {
+      el.textContent = '';
+      row.classList.remove('is-over', 'is-near');
+      return;
+    }
+    el.textContent = ` / ¥${limit.toLocaleString('ja-JP')}`;
+    const over = sum > limit;
+    const near = !over && sum >= limit * NEAR_RATIO;
+    row.classList.toggle('is-over', over);
+    row.classList.toggle('is-near', near);
   }
 
   function renderRatioBar(sums) {
@@ -451,6 +515,35 @@
 
   function saveEntries() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }
+
+  function loadLimits() {
+    try {
+      const raw = localStorage.getItem(LIMITS_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return {};
+      const out = {};
+      for (const k of ['necessary', 'enjoy', 'waste']) {
+        const v = parseInt(parsed[k], 10);
+        if (Number.isFinite(v) && v > 0) out[k] = v;
+      }
+      return out;
+    } catch {
+      return {};
+    }
+  }
+
+  function saveLimits() {
+    localStorage.setItem(LIMITS_KEY, JSON.stringify(limits));
+  }
+
+  function populateLimitInputs() {
+    limitInputs.forEach((input) => {
+      const tag = input.dataset.limitTag;
+      const v = limits[tag];
+      input.value = v ? String(v) : '';
+    });
   }
 
   function getMonthSums(year, month) {
