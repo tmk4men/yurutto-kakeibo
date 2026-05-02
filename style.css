@@ -64,27 +64,35 @@ input[type="number"], input[type="date"] {
   position: absolute;
   top: 6px;
   right: 14px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   border: 1.5px solid var(--ink-soft);
   background: var(--paper);
-  color: var(--ink-soft);
-  font-size: 16px;
-  font-weight: 600;
   cursor: pointer;
-  font-family: 'Klee One', sans-serif;
   -webkit-tap-highlight-color: transparent;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 3.5px;
   padding: 0;
-  line-height: 1;
+}
+
+.help-btn__bar {
+  width: 16px;
+  height: 1.8px;
+  background: var(--ink-soft);
+  border-radius: 1px;
+  transition: background 0.15s ease;
 }
 
 .help-btn:active {
   background: var(--ink-soft);
-  color: var(--paper);
+}
+
+.help-btn:active .help-btn__bar {
+  background: var(--paper);
 }
 
 .title {

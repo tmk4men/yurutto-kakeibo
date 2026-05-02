@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=12" />
 
   <!-- パスワード設定済みなら CSS で本体を即非表示にして覗き見防止 -->
   <script>
@@ -48,7 +48,11 @@
   <main class="page">
     <header class="topbar">
       <h1 class="title">ゆるっと家計簿</h1>
-      <button type="button" id="helpBtn" class="help-btn" aria-label="使い方">?</button>
+      <button type="button" id="helpBtn" class="help-btn" aria-label="メニュー">
+        <span class="help-btn__bar"></span>
+        <span class="help-btn__bar"></span>
+        <span class="help-btn__bar"></span>
+      </button>
       <div class="tabs" role="tablist">
         <button type="button" class="tab is-active" role="tab" aria-selected="true" data-pane="0">書く</button>
         <button type="button" class="tab" role="tab" aria-selected="false" data-pane="1">きろく</button>
@@ -225,6 +229,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
