@@ -121,19 +121,19 @@ input[type="number"], input[type="date"] {
 .numpad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin: 0 0 28px;
+  gap: 12px;
+  margin: 0 0 32px;
 }
 
 .key {
   background: var(--paper);
   border: 1.5px solid var(--ink-soft);
-  border-radius: 14px;
+  border-radius: 16px;
   font-family: 'Klee One', sans-serif;
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 600;
   color: var(--ink);
-  padding: 16px 0;
+  padding: 26px 0;
   cursor: pointer;
   transition: transform 0.05s ease, background 0.15s ease;
   -webkit-user-select: none;
@@ -147,7 +147,7 @@ input[type="number"], input[type="date"] {
 }
 
 .key--back {
-  font-size: 22px;
+  font-size: 28px;
   color: var(--ink-soft);
 }
 
@@ -160,18 +160,18 @@ input[type="number"], input[type="date"] {
 
 .tags {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .tag {
   flex: 1;
   background: var(--paper);
   border: 1.5px solid var(--ink-soft);
-  border-radius: 14px;
-  padding: 14px 6px;
-  font-size: 17px;
+  border-radius: 16px;
+  padding: 20px 6px;
+  font-size: 20px;
   color: var(--ink);
   cursor: pointer;
   transition: transform 0.08s ease, background 0.15s ease, color 0.15s ease;
@@ -196,10 +196,10 @@ input[type="number"], input[type="date"] {
   background: var(--ink);
   color: var(--paper);
   border: none;
-  border-radius: 16px;
-  padding: 16px;
-  font-size: 20px;
-  letter-spacing: 0.1em;
+  border-radius: 18px;
+  padding: 22px;
+  font-size: 22px;
+  letter-spacing: 0.12em;
   cursor: pointer;
   transition: transform 0.08s ease, opacity 0.15s ease;
 }
@@ -387,11 +387,13 @@ input[type="number"], input[type="date"] {
 
 /* ─── 狭い画面の調整 ─── */
 @media (max-width: 360px) {
-  .page { padding: 22px 16px 50px; }
+  .page { padding: 22px 14px 50px; }
   .title { font-size: 26px; }
   .amount-display { font-size: 38px; }
   .yen { font-size: 30px; }
-  .key { font-size: 22px; padding: 14px 0; }
-  .tag { font-size: 15px; padding: 12px 4px; }
-  .save-btn { font-size: 18px; padding: 14px; }
+  .numpad { gap: 10px; }
+  .key { font-size: 26px; padding: 22px 0; }
+  .key--back { font-size: 24px; }
+  .tag { font-size: 18px; padding: 18px 4px; }
+  .save-btn { font-size: 20px; padding: 20px; }
 }
