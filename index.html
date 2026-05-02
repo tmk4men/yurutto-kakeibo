@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fbf7ee" />
-  <title>シンプル家計簿</title>
+  <title>ゆるっと家計簿</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
@@ -12,7 +12,7 @@
 </head>
 <body>
   <main class="page">
-    <h1 class="title">シンプル家計簿</h1>
+    <h1 class="title">ゆるっと家計簿</h1>
 
     <section class="entry" aria-label="入力">
       <div class="date-row">
@@ -20,20 +20,19 @@
         <input type="date" id="dateInput" class="date-input" />
       </div>
 
-      <label class="amount-field">
+      <div class="amount-field">
         <span class="yen">¥</span>
-        <input
-          type="number"
-          id="amountInput"
-          class="amount-input"
-          inputmode="numeric"
-          pattern="[0-9]*"
-          min="0"
-          step="1"
-          placeholder="0"
-          aria-label="金額"
-        />
-      </label>
+        <span id="amountDisplay" class="amount-display is-empty" aria-live="polite" aria-label="金額">0</span>
+      </div>
+
+      <div class="numpad" aria-label="金額入力">
+        <button type="button" class="key key--add" data-add="100">+100</button>
+        <button type="button" class="key key--add" data-add="500">+500</button>
+        <button type="button" class="key key--add" data-add="1000">+1000</button>
+        <button type="button" class="key key--add" data-add="3000">+3000</button>
+        <button type="button" class="key key--add" data-add="5000">+5000</button>
+        <button type="button" class="key key--back" id="backspaceBtn" aria-label="一個戻す">⌫</button>
+      </div>
 
       <p class="ask">どんなお金？</p>
       <div class="tags" role="radiogroup" aria-label="タグ">

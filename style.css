@@ -100,31 +100,56 @@ input[type="number"], input[type="date"] {
   color: var(--ink-soft);
 }
 
-.amount-input {
+.amount-display {
   flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
+  font-family: 'Klee One', sans-serif;
   font-size: 44px;
   font-weight: 600;
   text-align: right;
   color: var(--ink);
-  width: 100%;
   min-width: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  letter-spacing: 0.02em;
 }
 
-.amount-input::placeholder {
+.amount-display.is-empty {
   color: #c4baa0;
   font-weight: 400;
 }
 
-/* iOSでスピナーを消す */
-.amount-input::-webkit-outer-spin-button,
-.amount-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 28px;
 }
-.amount-input { -moz-appearance: textfield; }
+
+.key {
+  background: var(--paper);
+  border: 1.5px solid var(--ink-soft);
+  border-radius: 14px;
+  font-family: 'Klee One', sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 16px 0;
+  cursor: pointer;
+  transition: transform 0.05s ease, background 0.15s ease;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.key:active {
+  transform: translateY(1px);
+  background: rgba(43, 58, 85, 0.08);
+}
+
+.key--back {
+  font-size: 22px;
+  color: var(--ink-soft);
+}
 
 .ask {
   font-size: 17px;
@@ -364,8 +389,9 @@ input[type="number"], input[type="date"] {
 @media (max-width: 360px) {
   .page { padding: 22px 16px 50px; }
   .title { font-size: 26px; }
-  .amount-input { font-size: 38px; }
+  .amount-display { font-size: 38px; }
   .yen { font-size: 30px; }
+  .key { font-size: 22px; padding: 14px 0; }
   .tag { font-size: 15px; padding: 12px 4px; }
   .save-btn { font-size: 18px; padding: 14px; }
 }

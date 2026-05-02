@@ -11,11 +11,15 @@
   // ─── 状態 ─────────────────────────
   let entries = loadEntries();
   let selectedTag = null;
+  let amountHistory = []; // 加算したチップの履歴 (例: [100, 500, 100])
+  const AMOUNT_CAP = 9999999;
   let viewYear, viewMonth; // viewMonth は 0-11
 
   // ─── DOM ─────────────────────────
   const dateInput = document.getElementById('dateInput');
-  const amountInput = document.getElementById('amountInput');
+  const amountDisplay = document.getElementById('amountDisplay');
+  const numpad = document.querySelector('.numpad');
+  const backspaceBtn = document.getElementById('backspaceBtn');
   const tagButtons = document.querySelectorAll('.tag');
   const saveBtn = document.getElementById('saveBtn');
   const monthLabel = document.getElementById('monthLabel');
@@ -35,11 +39,24 @@
   dateInput.value = toISODate(today);
 
   bindEvents();
+  updateAmountDisplay();
   render();
 
   // ─── イベント ─────────────────────────
   function bindEvents() {
-    amountInput.addEventListener('input', updateSaveBtnState);
+    numpad.addEventListener('click', (e) => {
+      const btn = e.target.closest('.key');
+      if (!btn) return;
+      if (btn === backspaceBtn) {
+        amountHistory.pop();
+      } else {
+        const add = parseInt(btn.dataset.add, 10);
+        if (!(add > 0)) return;
+        if (currentAmount() + add > AMOUNT_CAP) return;
+        amountHistory.push(add);
+      }
+      updateAmountDisplay();
+    });
 
     tagButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -76,13 +93,23 @@
     });
   }
 
+  function currentAmount() {
+    return amountHistory.reduce((a, b) => a + b, 0);
+  }
+
+  function updateAmountDisplay() {
+    const n = currentAmount();
+    amountDisplay.textContent = n === 0 ? '0' : n.toLocaleString('ja-JP');
+    amountDisplay.classList.toggle('is-empty', n === 0);
+    updateSaveBtnState();
+  }
+
   function updateSaveBtnState() {
-    const amount = parseInt(amountInput.value, 10);
-    saveBtn.disabled = !(amount > 0 && selectedTag);
+    saveBtn.disabled = !(currentAmount() > 0 && selectedTag);
   }
 
   function handleSave() {
-    const amount = parseInt(amountInput.value, 10);
+    const amount = currentAmount();
     if (!(amount > 0) || !selectedTag) return;
 
     const entry = {
@@ -98,14 +125,14 @@
   }
 
   function resetForm() {
-    amountInput.value = '';
+    amountHistory = [];
     selectedTag = null;
     tagButtons.forEach((b) => {
       b.classList.remove('is-active');
       b.setAttribute('aria-checked', 'false');
     });
     dateInput.value = toISODate(new Date());
-    updateSaveBtnState();
+    updateAmountDisplay();
   }
 
   function handleDelete(id) {
