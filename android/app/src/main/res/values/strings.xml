@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ゆるっと家計簿</string>
+    <string name="title_activity_main">ゆるっと家計簿</string>
+    <string name="package_name">com.tmk4men.yuruttokakeibo</string>
+    <string name="custom_url_scheme">com.tmk4men.yuruttokakeibo</string>
+</resources>

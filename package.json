@@ -1,0 +1,16 @@
+{
+  "name": "yurutto-kakeibo",
+  "version": "0.1.0",
+  "description": "家計簿が苦手な人のための、ミニマル家計簿",
+  "private": true,
+  "scripts": {
+    "copy-web": "node scripts/copy-web.js",
+    "sync": "npm run copy-web && cap sync",
+    "open:android": "cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "latest",
+    "@capacitor/core": "latest",
+    "@capacitor/android": "latest"
+  }
+}

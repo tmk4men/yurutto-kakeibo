@@ -1,0 +1,20 @@
+# Node
+node_modules/
+
+# Capacitor生成物 (web版ソースから再生成可能)
+www/
+
+# Android Studio / Gradle
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+android/captures/
+android/local.properties
+android/app/release/
+android/.cxx/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
