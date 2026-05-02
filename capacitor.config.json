@@ -1,6 +1,6 @@
 {
   "appId": "com.tmk4men.yuruttokakeibo",
-  "appName": "ゆるっと家計簿",
+  "appName": "ゆとり家計簿",
   "webDir": "www",
   "server": {
     "androidScheme": "https"

@@ -1,4 +1,4 @@
-# ゆるっと家計簿
+# ゆとり家計簿
 
 家計簿が苦手な人のための、ミニマル家計簿。「必要・楽しみ・ムダかも」の3タグで記録し、月の上限・吹き出しメッセージ・PWAでホーム画面追加にも対応。
 
@@ -45,6 +45,6 @@ npm run copy-web && npx cap sync android
 ## アプリ ID
 
 - App ID: `com.tmk4men.yuruttokakeibo`
-- App Name: `ゆるっと家計簿`
+- App Name: `ゆとり家計簿`
 
 変更したい場合は `capacitor.config.json` と `android/app/src/main/AndroidManifest.xml` 周辺を編集。
