@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#fbf7ee" />
+  <title>シンプル家計簿</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="page">
+    <h1 class="title">シンプル家計簿</h1>
+
+    <section class="entry" aria-label="入力">
+      <div class="date-row">
+        <span class="date-label">きょう</span>
+        <input type="date" id="dateInput" class="date-input" />
+      </div>
+
+      <label class="amount-field">
+        <span class="yen">¥</span>
+        <input
+          type="number"
+          id="amountInput"
+          class="amount-input"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          min="0"
+          step="1"
+          placeholder="0"
+          aria-label="金額"
+        />
+      </label>
+
+      <p class="ask">どんなお金？</p>
+      <div class="tags" role="radiogroup" aria-label="タグ">
+        <button type="button" class="tag tag--necessary" data-tag="necessary" role="radio" aria-checked="false">必要</button>
+        <button type="button" class="tag tag--enjoy" data-tag="enjoy" role="radio" aria-checked="false">楽しみ</button>
+        <button type="button" class="tag tag--waste" data-tag="waste" role="radio" aria-checked="false">ムダかも</button>
+      </div>
+
+      <button type="button" id="saveBtn" class="save-btn" disabled>書きこむ</button>
+    </section>
+
+    <section class="month" aria-label="月のまとめ">
+      <div class="month-nav">
+        <button type="button" id="prevMonth" class="month-arrow" aria-label="前の月">‹</button>
+        <h2 id="monthLabel" class="month-label">5月の記録</h2>
+        <button type="button" id="nextMonth" class="month-arrow" aria-label="次の月">›</button>
+      </div>
+
+      <ul class="summary">
+        <li><span class="sum-label sum-label--necessary">必要</span><span class="sum-value" id="sumNecessary">¥0</span></li>
+        <li><span class="sum-label sum-label--enjoy">楽しみ</span><span class="sum-value" id="sumEnjoy">¥0</span></li>
+        <li><span class="sum-label sum-label--waste">ムダかも</span><span class="sum-value" id="sumWaste">¥0</span></li>
+      </ul>
+      <div class="total">
+        <span class="total-label">ぜんぶで</span>
+        <span class="total-value" id="sumTotal">¥0</span>
+      </div>
+    </section>
+
+    <section class="list-section" aria-label="記録一覧">
+      <h2 class="list-title">きろく</h2>
+      <ul id="entryList" class="entry-list"></ul>
+      <p id="emptyMsg" class="empty-msg">まだ なにも書いていません</p>
+    </section>
+
+    <p class="footnote">データはこのブラウザだけに保存されます</p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
