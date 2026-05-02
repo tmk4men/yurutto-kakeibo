@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
   <main class="page">
@@ -155,10 +155,13 @@
     <p class="footnote">データはこのブラウザだけに保存されます</p>
   </main>
 
-  <div id="toast" class="toast" aria-live="polite"></div>
+  <div id="toast" class="toast" aria-live="polite">
+    <span id="toastText" class="toast__text"></span>
+    <button type="button" id="toastAction" class="toast__action" hidden>もどす</button>
+  </div>
   <div id="hintPop" class="hint-pop" role="tooltip"></div>
 
-  <div id="helpModal" class="help-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div id="helpModal" class="help-modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <div class="help-modal__backdrop" id="helpBackdrop"></div>
     <div class="help-modal__sheet" role="document">
       <button type="button" class="help-modal__close" id="helpClose" aria-label="閉じる">×</button>
@@ -175,6 +178,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

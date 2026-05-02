@@ -61,6 +61,8 @@
   const panesEl = document.getElementById('panes');
   const paneViewport = document.querySelector('.pane-viewport');
   const toastEl = document.getElementById('toast');
+  const toastText = document.getElementById('toastText');
+  const toastAction = document.getElementById('toastAction');
   const hintPopEl = document.getElementById('hintPop');
   const statusBubble = document.getElementById('statusBubble');
   const helpBtn = document.getElementById('helpBtn');
@@ -156,15 +158,20 @@
     helpClose.addEventListener('click', closeHelp);
     helpBackdrop.addEventListener('click', closeHelp);
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !helpModal.classList.contains('is-hidden')) closeHelp();
+      if (e.key === 'Escape' && helpModal.classList.contains('is-open')) closeHelp();
+    });
+
+    // トーストのアクションボタン (Undoなど)
+    toastAction.addEventListener('click', () => {
+      if (toastActionHandler) toastActionHandler();
     });
   }
 
   function openHelp() {
-    helpModal.classList.remove('is-hidden');
+    helpModal.classList.add('is-open');
   }
   function closeHelp() {
-    helpModal.classList.add('is-hidden');
+    helpModal.classList.remove('is-open');
   }
 
   // ─── タグ: タップ即保存 + 長押しヒント ──────────────────
@@ -216,6 +223,7 @@
     const before = getMonthSums(eY, eM - 1)[tag];
     saveEntry({ tag, amount, date: entryDate });
     resetForm();
+    flashSaved(btn);
     render();
 
     const limit = limits[tag];
@@ -227,6 +235,14 @@
     } else {
       showToast('書いた！');
     }
+  }
+
+  function flashSaved(btn) {
+    btn.classList.remove('is-saved');
+    // 連続押し対応のため一度リフローしてからクラス再付与
+    void btn.offsetWidth;
+    btn.classList.add('is-saved');
+    setTimeout(() => btn.classList.remove('is-saved'), 380);
   }
 
   function shakeAmount() {
@@ -292,13 +308,36 @@
 
   // ─── トースト ──────────────────
   let toastTimer = null;
-  function showToast(msg, ms = 1400, variant = '') {
-    toastEl.textContent = msg;
+  let toastActionHandler = null;
+
+  // showToast(msg)
+  // showToast(msg, ms, variant)               — 旧シグネチャ互換
+  // showToast(msg, { ms, variant, action })   — 新シグネチャ
+  function showToast(msg, optsOrMs = {}, variantStr = '') {
+    let opts;
+    if (typeof optsOrMs === 'number') {
+      opts = { ms: optsOrMs, variant: variantStr };
+    } else {
+      opts = optsOrMs || {};
+    }
+    const { ms = 1400, variant = '', action = null } = opts;
+    toastText.textContent = msg;
+    if (action) {
+      toastAction.textContent = action.label || 'もどす';
+      toastAction.hidden = false;
+      toastActionHandler = action.onClick || null;
+    } else {
+      toastAction.hidden = true;
+      toastActionHandler = null;
+    }
     toastEl.className = 'toast is-show' + (variant ? ` toast--${variant}` : '');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-      toastEl.classList.remove('is-show');
-    }, ms);
+    toastTimer = setTimeout(hideToast, ms);
+  }
+
+  function hideToast() {
+    toastEl.classList.remove('is-show');
+    toastActionHandler = null;
   }
 
   // ─── ヒントポップ ──────────────────
@@ -398,11 +437,28 @@
     paneViewport.addEventListener('touchcancel', finish);
   }
 
-  // ─── 削除 ──────────────────
+  // ─── 削除 + Undo ──────────────────
   function handleDelete(id) {
-    entries = entries.filter((e) => e.id !== id);
+    const idx = entries.findIndex((e) => e.id === id);
+    if (idx < 0) return;
+    const removed = entries[idx];
+    entries.splice(idx, 1);
     saveEntries();
     render();
+    showToast('消した', {
+      ms: 4000,
+      action: {
+        label: 'もどす',
+        onClick: () => {
+          // 同じidが存在しないことを確認 (二重押し対策)
+          if (entries.some((e) => e.id === removed.id)) return;
+          entries.splice(Math.min(idx, entries.length), 0, removed);
+          saveEntries();
+          render();
+          hideToast();
+        },
+      },
+    });
   }
 
   // ─── 描画 (きろく) ──────────────────
@@ -602,9 +658,7 @@
     delBtn.className = 'entry-delete';
     delBtn.setAttribute('aria-label', '削除');
     delBtn.textContent = '×';
-    delBtn.addEventListener('click', () => {
-      if (confirm('この記録を消しますか？')) handleDelete(e.id);
-    });
+    delBtn.addEventListener('click', () => handleDelete(e.id));
 
     li.append(dateSpan, amountSpan, tagSpan, delBtn);
     return li;

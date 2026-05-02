@@ -300,20 +300,52 @@ input[type="number"], input[type="date"] {
 .tag {
   flex: 1;
   background: var(--paper);
-  border: 1.5px solid var(--ink-soft);
+  border: 1.5px solid var(--tag-color, var(--ink-soft));
   border-radius: 12px;
   padding: 14px 4px;
   font-size: 18px;
-  color: var(--ink);
+  font-weight: 500;
+  color: var(--tag-color, var(--ink));
   cursor: pointer;
-  transition: transform 0.08s ease, background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s ease, transform 0.08s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.tag:active { transform: translateY(1px); }
-.tag--necessary { border-color: var(--necessary); color: var(--necessary); }
-.tag--enjoy     { border-color: var(--enjoy);     color: var(--enjoy); }
-.tag--waste     { border-color: var(--waste);    color: var(--waste); }
+.tag:active {
+  transform: translateY(1px);
+  background: var(--tag-tint, rgba(43, 58, 85, 0.08));
+}
+
+.tag--necessary { --tag-color: var(--necessary); --tag-tint: rgba(74, 127, 181, 0.13); }
+.tag--enjoy     { --tag-color: var(--enjoy);     --tag-tint: rgba(232, 155, 74, 0.13); }
+.tag--waste     { --tag-color: var(--waste);     --tag-tint: rgba(140, 140, 140, 0.13); }
+
+.tag.is-saved {
+  animation: tag-saved 0.36s cubic-bezier(0.2, 0.8, 0.3, 1.05);
+}
+
+@keyframes tag-saved {
+  0% {
+    background: var(--paper);
+    color: var(--tag-color);
+    transform: scale(1);
+  }
+  35% {
+    background: var(--tag-color);
+    color: var(--paper);
+    transform: scale(1.06);
+  }
+  65% {
+    background: var(--tag-color);
+    color: var(--paper);
+    transform: scale(1.02);
+  }
+  100% {
+    background: var(--paper);
+    color: var(--tag-color);
+    transform: scale(1);
+  }
+}
 
 /* ─── 月のまとめ (きろくペイン) ─── */
 .month {
@@ -663,16 +695,16 @@ input[type="number"], input[type="date"] {
   position: fixed;
   left: 50%;
   bottom: 24px;
-  transform: translate(-50%, 12px);
+  transform: translate(-50%, 12px) scale(0.96);
   background: var(--ink);
   color: var(--paper);
-  padding: 10px 20px;
+  padding: 10px 18px;
   border-radius: 999px;
   font-size: 15px;
   letter-spacing: 0.05em;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.3, 1.1);
   z-index: 100;
   box-shadow: 0 4px 16px rgba(43, 58, 85, 0.2);
   display: inline-flex;
@@ -682,8 +714,30 @@ input[type="number"], input[type="date"] {
 
 .toast.is-show {
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform: translate(-50%, 0) scale(1);
+  pointer-events: auto;
 }
+
+.toast__action {
+  background: transparent;
+  border: 1.5px solid var(--paper);
+  color: var(--paper);
+  border-radius: 999px;
+  padding: 4px 12px;
+  margin-left: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.toast__action:active {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.toast__action[hidden] { display: none; }
 
 .toast--yabai::before {
   content: '';
@@ -740,9 +794,15 @@ input[type="number"], input[type="date"] {
   justify-content: center;
   z-index: 200;
   padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
 }
 
-.help-modal.is-hidden { display: none; }
+.help-modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .help-modal__backdrop {
   position: absolute;
@@ -754,6 +814,8 @@ input[type="number"], input[type="date"] {
 .help-modal__sheet {
   position: relative;
   background: var(--paper);
+  transform: scale(0.94);
+  transition: transform 0.22s cubic-bezier(0.18, 0.85, 0.32, 1.1);
   border-radius: 16px;
   padding: 20px 22px 16px;
   max-width: 380px;
@@ -768,6 +830,10 @@ input[type="number"], input[type="date"] {
     rgba(217, 207, 182, 0.4) 27px,
     rgba(217, 207, 182, 0.4) 28px
   );
+}
+
+.help-modal.is-open .help-modal__sheet {
+  transform: scale(1);
 }
 
 .help-modal__close {
