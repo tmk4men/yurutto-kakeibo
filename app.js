@@ -492,40 +492,79 @@
     if (total === 0) {
       return { text: 'まだ何も書いていないよ', tone: 'neutral' };
     }
-    // 1) 必要が予算オーバー → 一番アラート
-    if (limits.necessary && sums.necessary > limits.necessary) {
-      return { text: '必要が予算オーバー、引き締めどき', tone: 'alert' };
+
+    // 上限が設定されているタグについて、超過率を計算
+    // overRatio = (used - limit) / limit  → 正なら超過、負なら余裕
+    let maxOverTag = null;
+    let maxOverRatio = 0;
+    let maxNearTag = null;
+    let maxNearRatio = 0;
+    for (const tag of ['necessary', 'enjoy', 'waste']) {
+      const lim = limits[tag];
+      if (!lim) continue;
+      const ratio = (sums[tag] - lim) / lim;
+      if (ratio > maxOverRatio) {
+        maxOverRatio = ratio;
+        maxOverTag = tag;
+      }
+      const usedRatio = sums[tag] / lim;
+      if (ratio <= 0 && usedRatio >= NEAR_RATIO && usedRatio > maxNearRatio) {
+        maxNearRatio = usedRatio;
+        maxNearTag = tag;
+      }
     }
-    // 2) ムダが上限超え → 反省ゾーン
-    if (limits.waste && sums.waste > limits.waste) {
-      return { text: '支払う前にもう一考...', tone: 'caution' };
-    }
-    // 3) 楽しみが上限超え
-    if (limits.enjoy && sums.enjoy > limits.enjoy) {
-      return { text: '楽しみすぎかも...', tone: 'caution' };
-    }
-    // 4) ムダ比率が高い (上限なくても警告)
+
+    // 1) 一番超えてるタグに触れる
+    if (maxOverTag) return overMessage(maxOverTag, maxOverRatio);
+
+    // 2) 上限手前 (80%以上) のタグがあれば、もっとも近づいてるタグに触れる
+    if (maxNearTag) return nearMessage(maxNearTag);
+
+    // 3) 上限なくてもムダ比率が高ければ反省ゾーン
     if (total >= 1000 && sums.waste / total > 0.25) {
       return { text: '支払う前にもう一考...', tone: 'caution' };
     }
-    // 5) どこかが80%以上に近づいてる
-    const nearTags = [];
-    for (const tag of ['necessary', 'enjoy', 'waste']) {
-      if (limits[tag] && sums[tag] >= limits[tag] * NEAR_RATIO) nearTags.push(tag);
-    }
-    if (nearTags.includes('enjoy')) return { text: '楽しみがそろそろ大詰め', tone: 'soft' };
-    if (nearTags.includes('necessary')) return { text: '必要がもうすぐ上限', tone: 'soft' };
-    if (nearTags.includes('waste')) return { text: 'ムダ、もうすぐ上限', tone: 'soft' };
-    // 6) 上限を設定済みで全部余裕 → いい感じ！
+
+    // 4) 上限を設定済みで全部余裕
     if (Object.keys(limits).length > 0) {
       return { text: 'いい感じ！', tone: 'good' };
     }
-    // 7) 上限なし、ムダ少なめ
+
+    // 5) 上限なし、ムダ少なめ
     if (total >= 3000 && sums.waste / total < 0.1) {
       return { text: 'いい感じ！', tone: 'good' };
     }
-    // 8) フォールバック
+
     return { text: 'ぼちぼちのペース', tone: 'neutral' };
+  }
+
+  function overMessage(tag, ratio) {
+    // ratio: 0.0 = ちょうど上限, 0.3 = 30%超, 1.0 = 倍
+    const sev = ratio >= 1.0 ? 'bad' : ratio >= 0.3 ? 'mid' : 'mild';
+    const M = {
+      necessary: {
+        mild: { text: '必要がちょっとオーバー', tone: 'caution' },
+        mid:  { text: '必要が予算オーバー、引き締めどき', tone: 'alert' },
+        bad:  { text: '必要、だいぶ超過。見直しどき', tone: 'alert' },
+      },
+      enjoy: {
+        mild: { text: '楽しみ、ちょっとはみ出した', tone: 'caution' },
+        mid:  { text: '楽しみすぎかも...', tone: 'caution' },
+        bad:  { text: '楽しみだいぶオーバー、ひと休み', tone: 'alert' },
+      },
+      waste: {
+        mild: { text: 'ムダ、ちょっと多め', tone: 'caution' },
+        mid:  { text: '支払う前にもう一考...', tone: 'caution' },
+        bad:  { text: 'ムダが多すぎ、深呼吸して...', tone: 'alert' },
+      },
+    };
+    return M[tag][sev];
+  }
+
+  function nearMessage(tag) {
+    if (tag === 'enjoy')     return { text: '楽しみがそろそろ大詰め', tone: 'soft' };
+    if (tag === 'necessary') return { text: '必要がもうすぐ上限', tone: 'soft' };
+    return { text: 'ムダ、もうすぐ上限', tone: 'soft' };
   }
 
   function renderRatioBar(sums) {
