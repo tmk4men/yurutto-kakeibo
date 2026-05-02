@@ -17,12 +17,13 @@
 html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
   background: var(--bg);
   color: var(--ink);
   font-family: 'Yomogi', 'Hiragino Maru Gothic ProN', 'Yu Gothic', sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 input, button {
@@ -37,35 +38,37 @@ input[type="number"], input[type="date"] {
 .page {
   max-width: 480px;
   margin: 0 auto;
-  padding: 20px 0 60px;
+  height: 100vh;
+  height: 100dvh;
   background: var(--paper);
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent 31px,
-    rgba(217, 207, 182, 0.45) 31px,
-    rgba(217, 207, 182, 0.45) 32px
+    transparent 27px,
+    rgba(217, 207, 182, 0.4) 27px,
+    rgba(217, 207, 182, 0.4) 28px
   );
-  min-height: 100vh;
   box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
 }
 
 /* ─── 上部 (タイトル + タブ) ─── */
 .topbar {
-  padding: 0 22px 8px;
+  flex-shrink: 0;
+  padding: 8px 22px 0;
 }
 
 .title {
-  font-size: 26px;
+  font-size: 22px;
   text-align: center;
-  margin: 0 0 14px;
+  margin: 0 0 6px;
   letter-spacing: 0.05em;
   font-weight: 400;
 }
 
 .tabs {
   display: flex;
-  gap: 0;
   border-bottom: 1.5px solid var(--line);
 }
 
@@ -73,8 +76,8 @@ input[type="number"], input[type="date"] {
   flex: 1;
   background: transparent;
   border: none;
-  padding: 10px 0 12px;
-  font-size: 18px;
+  padding: 8px 0 10px;
+  font-size: 17px;
   color: var(--ink-soft);
   cursor: pointer;
   position: relative;
@@ -96,14 +99,17 @@ input[type="number"], input[type="date"] {
   border-radius: 2px;
 }
 
-/* ─── ペインビューポート (横スワイプの土台) ─── */
+/* ─── ペインビューポート ─── */
 .pane-viewport {
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
 .panes {
   display: flex;
   width: 200%;
+  height: 100%;
   will-change: transform;
 }
 
@@ -114,24 +120,29 @@ input[type="number"], input[type="date"] {
 .pane {
   width: 50%;
   flex-shrink: 0;
-  padding: 22px 22px 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 22px 0;
+  overflow: hidden;
 }
 
 /* ─── 入力 (書くペイン) ─── */
 .entry {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  gap: 10px;
 }
 
 .date-row {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 10px;
 }
 
 .date-label {
-  font-size: 18px;
+  font-size: 16px;
   color: var(--ink-soft);
 }
 
@@ -139,9 +150,9 @@ input[type="number"], input[type="date"] {
   background: transparent;
   border: none;
   border-bottom: 1.5px dashed var(--ink-soft);
-  font-size: 18px;
+  font-size: 16px;
   color: var(--ink);
-  padding: 2px 4px;
+  padding: 1px 4px;
   outline: none;
 }
 
@@ -150,13 +161,12 @@ input[type="number"], input[type="date"] {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin: 8px 0 24px;
-  padding: 14px 16px 10px;
+  padding: 6px 14px 4px;
   border-bottom: 2px solid var(--ink);
 }
 
 .yen {
-  font-size: 36px;
+  font-size: 32px;
   font-family: 'Klee One', sans-serif;
   color: var(--ink-soft);
 }
@@ -164,7 +174,7 @@ input[type="number"], input[type="date"] {
 .amount-display {
   flex: 1;
   font-family: 'Klee One', sans-serif;
-  font-size: 46px;
+  font-size: 40px;
   font-weight: 600;
   text-align: right;
   color: var(--ink);
@@ -182,25 +192,24 @@ input[type="number"], input[type="date"] {
 .numpad-row {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 28px;
+  gap: 6px;
 }
 
 .numpad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 8px;
 }
 
 .key {
   background: var(--paper);
   border: 1.5px solid var(--ink-soft);
-  border-radius: 16px;
+  border-radius: 12px;
   font-family: 'Klee One', sans-serif;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--ink);
-  padding: 24px 0;
+  padding: 14px 0;
   cursor: pointer;
   transition: transform 0.05s ease, background 0.15s ease;
   -webkit-user-select: none;
@@ -214,7 +223,7 @@ input[type="number"], input[type="date"] {
 }
 
 .key--back {
-  font-size: 26px;
+  font-size: 22px;
   color: var(--ink-soft);
 }
 
@@ -223,8 +232,8 @@ input[type="number"], input[type="date"] {
   background: transparent;
   border: 1.5px dashed var(--ink-soft);
   border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 14px;
+  padding: 4px 12px;
+  font-size: 12px;
   color: var(--ink-soft);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -236,65 +245,53 @@ input[type="number"], input[type="date"] {
   border-style: solid;
 }
 
-.grain-toggle__label::before {
-  content: 'ざっくり';
-}
-
-.grain-toggle[aria-pressed="true"] .grain-toggle__label::before {
-  content: 'ぴったり';
-}
+.grain-toggle__label::before { content: 'ざっくり'; }
+.grain-toggle[aria-pressed="true"] .grain-toggle__label::before { content: 'ぴったり'; }
 
 .ask {
-  font-size: 17px;
+  font-size: 15px;
   color: var(--ink-soft);
-  margin: 0 0 12px;
+  margin: 0;
   text-align: center;
 }
 
 .ask-hint {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--ink-soft);
   opacity: 0.7;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .tags {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   justify-content: center;
-  margin-bottom: 28px;
 }
 
 .tag {
   flex: 1;
   background: var(--paper);
   border: 1.5px solid var(--ink-soft);
-  border-radius: 16px;
-  padding: 22px 6px;
-  font-size: 20px;
+  border-radius: 12px;
+  padding: 14px 4px;
+  font-size: 18px;
   color: var(--ink);
   cursor: pointer;
   transition: transform 0.08s ease, background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.tag:active {
-  transform: translateY(1px);
-}
-
-.tag.is-disabled {
-  opacity: 0.4;
-}
-
+.tag:active { transform: translateY(1px); }
 .tag--necessary { border-color: var(--necessary); color: var(--necessary); }
 .tag--enjoy     { border-color: var(--enjoy);     color: var(--enjoy); }
 .tag--waste     { border-color: var(--waste);    color: var(--waste); }
 
 /* ─── 月のまとめ (きろくペイン) ─── */
 .month {
-  margin: 0 0 24px;
-  padding: 16px 16px 14px;
+  flex-shrink: 0;
+  margin-bottom: 10px;
+  padding: 10px 12px 8px;
   background: rgba(255, 255, 255, 0.5);
   border-radius: 12px;
 }
@@ -303,11 +300,11 @@ input[type="number"], input[type="date"] {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 .month-label {
-  font-size: 20px;
+  font-size: 18px;
   margin: 0;
   font-weight: 400;
 }
@@ -315,33 +312,32 @@ input[type="number"], input[type="date"] {
 .month-arrow {
   background: transparent;
   border: none;
-  font-size: 28px;
+  font-size: 24px;
   color: var(--ink-soft);
   cursor: pointer;
-  padding: 4px 12px;
+  padding: 2px 12px;
   line-height: 1;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 上限エディタ */
 .limits-editor {
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   border: 1px dashed var(--line);
   border-radius: 10px;
-  padding: 0 12px;
+  padding: 0 10px;
 }
 
 .limits-editor > summary {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--ink-soft);
   cursor: pointer;
-  padding: 8px 0;
+  padding: 5px 0;
   list-style: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.limits-editor > summary::-webkit-details-marker {
-  display: none;
-}
+.limits-editor > summary::-webkit-details-marker { display: none; }
 
 .limits-editor > summary::before {
   content: '▸ ';
@@ -349,36 +345,32 @@ input[type="number"], input[type="date"] {
   transition: transform 0.15s ease;
 }
 
-.limits-editor[open] > summary::before {
-  transform: rotate(90deg);
-}
+.limits-editor[open] > summary::before { transform: rotate(90deg); }
 
 .limits-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .limit-cell {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
+  gap: 2px;
+  font-size: 12px;
   color: var(--ink-soft);
 }
 
-.limit-cell__label {
-  text-align: center;
-}
+.limit-cell__label { text-align: center; }
 
 .limit-input {
   background: var(--paper);
   border: 1.5px solid var(--line);
   border-radius: 8px;
-  padding: 6px 8px;
+  padding: 4px 6px;
   font-family: 'Klee One', sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   color: var(--ink);
   width: 100%;
   outline: none;
@@ -392,15 +384,13 @@ input[type="number"], input[type="date"] {
   margin: 0;
 }
 
-.limit-input:focus {
-  border-color: var(--ink-soft);
-}
+.limit-input:focus { border-color: var(--ink-soft); }
 
 .limits-hint {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--ink-soft);
   opacity: 0.7;
-  margin: 0 0 8px;
+  margin: 0 0 5px;
   text-align: center;
 }
 
@@ -415,16 +405,39 @@ input[type="number"], input[type="date"] {
   grid-template-columns: 1fr auto auto;
   align-items: baseline;
   column-gap: 10px;
-  padding: 8px 4px;
+  padding: 5px 4px;
   border-bottom: 1px dotted var(--line);
 }
 
+.sum-label { font-size: 16px; }
+.sum-label--necessary { color: var(--necessary); }
+.sum-label--enjoy     { color: var(--enjoy); }
+.sum-label--waste     { color: var(--waste); font-size: 14px; }
+
+.sum-value {
+  font-family: 'Klee One', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+}
+
 .sum-limit {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-soft);
   margin-left: 4px;
   font-family: 'Klee One', sans-serif;
 }
+
+.sum-diff {
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-family: 'Klee One', sans-serif;
+  white-space: nowrap;
+  min-width: 56px;
+  text-align: right;
+}
+
+.sum-diff.is-up    { color: #c5604a; }
+.sum-diff.is-down  { color: #5e8c5d; }
 
 .summary__row.is-over .sum-label,
 .summary__row.is-over .sum-value,
@@ -433,51 +446,32 @@ input[type="number"], input[type="date"] {
 }
 
 .summary__row.is-over .sum-limit::after {
-  content: ' 😬';
+  content: '';
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  background-image: url('yabai.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  vertical-align: -0.22em;
+  margin-left: 4px;
 }
 
-.summary__row.is-near .sum-limit {
-  color: #b88736;
-}
-
-.sum-label {
-  font-size: 17px;
-}
-
-.sum-label--necessary { color: var(--necessary); }
-.sum-label--enjoy     { color: var(--enjoy); }
-.sum-label--waste     { color: var(--waste); font-size: 15px; }
-
-.sum-value {
-  font-family: 'Klee One', sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.sum-diff {
-  font-size: 12px;
-  color: var(--ink-soft);
-  font-family: 'Klee One', sans-serif;
-  white-space: nowrap;
-  min-width: 64px;
-  text-align: right;
-}
-
-.sum-diff.is-up    { color: #c5604a; }
-.sum-diff.is-down  { color: #5e8c5d; }
+.summary__row.is-near .sum-limit { color: #b88736; }
 
 .ratio-bar {
   display: flex;
-  height: 8px;
+  height: 7px;
   border-radius: 999px;
   overflow: hidden;
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   background: rgba(217, 207, 182, 0.5);
 }
 
 .ratio-bar__seg {
   height: 100%;
-  transition: width 0.25s ease;
+  transition: flex-basis 0.25s ease;
   flex: 0 0 0%;
 }
 
@@ -489,50 +483,57 @@ input[type="number"], input[type="date"] {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-top: 14px;
-  padding-top: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
   border-top: 2px solid var(--ink);
 }
 
-.total-label {
-  font-size: 18px;
-}
+.total-label { font-size: 16px; }
 
 .total-value {
   font-family: 'Klee One', sans-serif;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
 }
 
-/* ─── 一覧 ─── */
+/* ─── 一覧 (記録) ─── */
 .list-section {
-  margin-top: 18px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
 }
 
 .list-title {
-  font-size: 18px;
-  margin: 0 0 10px;
+  font-size: 15px;
+  margin: 0 0 4px;
   font-weight: 400;
   color: var(--ink-soft);
+  flex-shrink: 0;
 }
 
 .entry-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 4px 8px 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .entry-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 4px;
+  padding: 7px 4px;
   border-bottom: 1px dashed var(--line);
 }
 
 .entry-date {
-  width: 56px;
-  font-size: 15px;
+  width: 50px;
+  font-size: 14px;
   color: var(--ink-soft);
   font-family: 'Klee One', sans-serif;
 }
@@ -540,13 +541,13 @@ input[type="number"], input[type="date"] {
 .entry-amount {
   flex: 1;
   font-family: 'Klee One', sans-serif;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 600;
 }
 
 .entry-tag {
-  font-size: 14px;
-  padding: 3px 10px;
+  font-size: 13px;
+  padding: 2px 9px;
   border-radius: 10px;
   color: white;
   white-space: nowrap;
@@ -554,15 +555,15 @@ input[type="number"], input[type="date"] {
 
 .entry-tag--necessary { background: var(--necessary); }
 .entry-tag--enjoy     { background: var(--enjoy); }
-.entry-tag--waste     { background: var(--waste); font-size: 13px; }
+.entry-tag--waste     { background: var(--waste); font-size: 12px; }
 
 .entry-delete {
   background: transparent;
   border: none;
   color: var(--ink-soft);
-  font-size: 22px;
-  width: 36px;
-  height: 36px;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
   border-radius: 50%;
   display: flex;
@@ -578,21 +579,21 @@ input[type="number"], input[type="date"] {
 .empty-msg {
   text-align: center;
   color: var(--ink-soft);
-  padding: 24px 0;
-  font-size: 16px;
+  padding: 16px 0;
+  font-size: 14px;
+  margin: 0;
 }
 
 .empty-msg.is-hidden,
-.entry-list.is-hidden {
-  display: none;
-}
+.entry-list.is-hidden { display: none; }
 
 .footnote {
+  flex-shrink: 0;
   text-align: center;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--ink-soft);
-  margin-top: 28px;
-  padding: 0 22px;
+  padding: 4px 22px 6px;
+  margin: 0;
   opacity: 0.7;
 }
 
@@ -600,19 +601,22 @@ input[type="number"], input[type="date"] {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 32px;
+  bottom: 24px;
   transform: translate(-50%, 12px);
   background: var(--ink);
   color: var(--paper);
-  padding: 12px 22px;
+  padding: 10px 20px;
   border-radius: 999px;
-  font-size: 16px;
+  font-size: 15px;
   letter-spacing: 0.05em;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
   z-index: 100;
   box-shadow: 0 4px 16px rgba(43, 58, 85, 0.2);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
 .toast.is-show {
@@ -620,14 +624,27 @@ input[type="number"], input[type="date"] {
   transform: translate(-50%, 0);
 }
 
+.toast--yabai::before {
+  content: '';
+  display: inline-block;
+  width: 1.3em;
+  height: 1.3em;
+  background-image: url('yabai.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  vertical-align: middle;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
 /* ─── 長押しヒント ─── */
 .hint-pop {
   position: fixed;
   background: var(--ink);
   color: var(--paper);
-  padding: 8px 14px;
+  padding: 7px 12px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 13px;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
@@ -654,15 +671,23 @@ input[type="number"], input[type="date"] {
 }
 
 /* ─── 狭い画面 ─── */
+@media (max-height: 640px) {
+  .title { font-size: 20px; margin-bottom: 4px; }
+  .topbar { padding: 6px 22px 0; }
+  .tab { padding: 6px 0 8px; font-size: 16px; }
+  .pane { padding: 8px 22px 0; }
+  .entry { gap: 8px; }
+  .amount-display { font-size: 36px; }
+  .yen { font-size: 28px; }
+  .amount-field { padding: 4px 12px 2px; }
+  .key { padding: 12px 0; font-size: 22px; }
+  .key--back { font-size: 20px; }
+  .tag { padding: 12px 4px; font-size: 17px; }
+  .ask { font-size: 14px; }
+}
+
 @media (max-width: 360px) {
-  .pane { padding: 18px 14px 0; }
-  .topbar { padding: 0 14px 8px; }
-  .title { font-size: 24px; }
-  .amount-display { font-size: 38px; }
-  .yen { font-size: 30px; }
-  .numpad { gap: 10px; }
-  .key { font-size: 24px; padding: 20px 0; }
-  .key--back { font-size: 22px; }
-  .tag { font-size: 18px; padding: 18px 4px; }
-  .footnote { padding: 0 14px; }
+  .pane { padding: 10px 14px 0; }
+  .topbar { padding: 6px 14px 0; }
+  .footnote { padding: 4px 14px 6px; }
 }

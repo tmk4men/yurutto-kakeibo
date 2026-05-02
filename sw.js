@@ -1,18 +1,19 @@
 // Service Worker — yurutto-kakeibo
 // Cache name のバージョンを上げると古いキャッシュは破棄される。
 // アセットを変更したらこの定数を上げる (例: yurutto-v4 → yurutto-v5)
-const CACHE = 'yurutto-v5';
+const CACHE = 'yurutto-v6';
 
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=5',
-  './app.js?v=5',
+  './style.css?v=6',
+  './app.js?v=6',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
   './ogp.png',
+  './yabai.svg',
 ];
 
 self.addEventListener('install', (event) => {

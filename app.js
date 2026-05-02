@@ -201,9 +201,9 @@
     const limit = limits[tag];
     const after = before + amount;
     if (limit && before <= limit && after > limit) {
-      showToast(`${TAGS[tag]}が上限こえた！😬`, 2400);
+      showToast(`${TAGS[tag]}が上限こえた！`, 2400, 'yabai');
     } else if (limit && after > limit) {
-      showToast(`書いた！(${TAGS[tag]} +¥${(after - limit).toLocaleString('ja-JP')}超え)`, 2000);
+      showToast(`書いた！(${TAGS[tag]} +¥${(after - limit).toLocaleString('ja-JP')}超え)`, 2000, 'yabai');
     } else {
       showToast('書いた！');
     }
@@ -272,11 +272,13 @@
 
   // ─── トースト ──────────────────
   let toastTimer = null;
-  function showToast(msg, ms = 1400) {
+  function showToast(msg, ms = 1400, variant = '') {
     toastEl.textContent = msg;
-    toastEl.classList.add('is-show');
+    toastEl.className = 'toast is-show' + (variant ? ` toast--${variant}` : '');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove('is-show'), ms);
+    toastTimer = setTimeout(() => {
+      toastEl.classList.remove('is-show');
+    }, ms);
   }
 
   // ─── ヒントポップ ──────────────────
