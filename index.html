@@ -9,6 +9,13 @@
   <title>ゆるっと家計簿</title>
   <meta name="description" content="家計簿が苦手な人のための、ミニマル家計簿。「必要・楽しみ・ムダかも」の3タグだけでゆるっと続く。" />
 
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="ゆるっと家計簿" />
+
   <meta property="og:title" content="ゆるっと家計簿" />
   <meta property="og:description" content="家計簿が苦手な人のための、ミニマル家計簿。「必要・楽しみ・ムダかも」の3タグだけでゆるっと続く。" />
   <meta property="og:type" content="website" />
@@ -26,69 +33,103 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
   <main class="page">
-    <h1 class="title">ゆるっと家計簿</h1>
-
-    <section class="entry" aria-label="入力">
-      <div class="date-row">
-        <span class="date-label">きょう</span>
-        <input type="date" id="dateInput" class="date-input" />
+    <header class="topbar">
+      <h1 class="title">ゆるっと家計簿</h1>
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab is-active" role="tab" aria-selected="true" data-pane="0">書く</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" data-pane="1">きろく</button>
       </div>
+    </header>
 
-      <div class="amount-field">
-        <span class="yen">¥</span>
-        <span id="amountDisplay" class="amount-display is-empty" aria-live="polite" aria-label="金額">0</span>
+    <div class="pane-viewport">
+      <div class="panes" id="panes">
+        <!-- ──── 書くページ ──── -->
+        <section class="pane" role="tabpanel" aria-label="書く">
+          <div class="entry">
+            <div class="date-row">
+              <span class="date-label">きょう</span>
+              <input type="date" id="dateInput" class="date-input" />
+            </div>
+
+            <div class="amount-field">
+              <span class="yen">¥</span>
+              <span id="amountDisplay" class="amount-display is-empty" aria-live="polite" aria-label="金額">0</span>
+            </div>
+
+            <div class="numpad-row">
+              <div class="numpad" id="numpad" aria-label="金額入力"></div>
+              <button type="button" class="grain-toggle" id="grainToggle" aria-pressed="false">
+                <span class="grain-toggle__label">ぴったり</span>
+              </button>
+            </div>
+
+            <p class="ask">どんなお金？ <span class="ask-hint">タップで書きこむ・長押しで意味</span></p>
+            <div class="tags" role="group" aria-label="タグ">
+              <button type="button" class="tag tag--necessary" data-tag="necessary">必要</button>
+              <button type="button" class="tag tag--enjoy" data-tag="enjoy">楽しみ</button>
+              <button type="button" class="tag tag--waste" data-tag="waste">ムダかも</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ──── きろくページ ──── -->
+        <section class="pane" role="tabpanel" aria-label="きろく">
+          <div class="month">
+            <div class="month-nav">
+              <button type="button" id="prevMonth" class="month-arrow" aria-label="前の月">‹</button>
+              <h2 id="monthLabel" class="month-label">5月の記録</h2>
+              <button type="button" id="nextMonth" class="month-arrow" aria-label="次の月">›</button>
+            </div>
+
+            <ul class="summary">
+              <li>
+                <span class="sum-label sum-label--necessary">必要</span>
+                <span class="sum-value" id="sumNecessary">¥0</span>
+                <span class="sum-diff" id="diffNecessary"></span>
+              </li>
+              <li>
+                <span class="sum-label sum-label--enjoy">楽しみ</span>
+                <span class="sum-value" id="sumEnjoy">¥0</span>
+                <span class="sum-diff" id="diffEnjoy"></span>
+              </li>
+              <li>
+                <span class="sum-label sum-label--waste">ムダかも</span>
+                <span class="sum-value" id="sumWaste">¥0</span>
+                <span class="sum-diff" id="diffWaste"></span>
+              </li>
+            </ul>
+
+            <div class="ratio-bar" id="ratioBar" aria-hidden="true">
+              <span class="ratio-bar__seg ratio-bar__seg--necessary"></span>
+              <span class="ratio-bar__seg ratio-bar__seg--enjoy"></span>
+              <span class="ratio-bar__seg ratio-bar__seg--waste"></span>
+            </div>
+
+            <div class="total">
+              <span class="total-label">ぜんぶで</span>
+              <span class="total-value" id="sumTotal">¥0</span>
+            </div>
+          </div>
+
+          <div class="list-section">
+            <h3 class="list-title">きろく</h3>
+            <ul id="entryList" class="entry-list"></ul>
+            <p id="emptyMsg" class="empty-msg">まだ なにも書いていません</p>
+          </div>
+        </section>
       </div>
-
-      <div class="numpad" aria-label="金額入力">
-        <button type="button" class="key key--add" data-add="100">+100</button>
-        <button type="button" class="key key--add" data-add="500">+500</button>
-        <button type="button" class="key key--add" data-add="1000">+1000</button>
-        <button type="button" class="key key--add" data-add="3000">+3000</button>
-        <button type="button" class="key key--add" data-add="5000">+5000</button>
-        <button type="button" class="key key--back" id="backspaceBtn" aria-label="一個戻す">⌫</button>
-      </div>
-
-      <p class="ask">どんなお金？</p>
-      <div class="tags" role="radiogroup" aria-label="タグ">
-        <button type="button" class="tag tag--necessary" data-tag="necessary" role="radio" aria-checked="false">必要</button>
-        <button type="button" class="tag tag--enjoy" data-tag="enjoy" role="radio" aria-checked="false">楽しみ</button>
-        <button type="button" class="tag tag--waste" data-tag="waste" role="radio" aria-checked="false">ムダかも</button>
-      </div>
-
-      <button type="button" id="saveBtn" class="save-btn" disabled>書きこむ</button>
-    </section>
-
-    <section class="month" aria-label="月のまとめ">
-      <div class="month-nav">
-        <button type="button" id="prevMonth" class="month-arrow" aria-label="前の月">‹</button>
-        <h2 id="monthLabel" class="month-label">5月の記録</h2>
-        <button type="button" id="nextMonth" class="month-arrow" aria-label="次の月">›</button>
-      </div>
-
-      <ul class="summary">
-        <li><span class="sum-label sum-label--necessary">必要</span><span class="sum-value" id="sumNecessary">¥0</span></li>
-        <li><span class="sum-label sum-label--enjoy">楽しみ</span><span class="sum-value" id="sumEnjoy">¥0</span></li>
-        <li><span class="sum-label sum-label--waste">ムダかも</span><span class="sum-value" id="sumWaste">¥0</span></li>
-      </ul>
-      <div class="total">
-        <span class="total-label">ぜんぶで</span>
-        <span class="total-value" id="sumTotal">¥0</span>
-      </div>
-    </section>
-
-    <section class="list-section" aria-label="記録一覧">
-      <h2 class="list-title">きろく</h2>
-      <ul id="entryList" class="entry-list"></ul>
-      <p id="emptyMsg" class="empty-msg">まだ なにも書いていません</p>
-    </section>
+    </div>
 
     <p class="footnote">データはこのブラウザだけに保存されます</p>
   </main>
 
-  <script src="app.js?v=3"></script>
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <div id="hintPop" class="hint-pop" role="tooltip"></div>
+
+  <script src="app.js?v=4"></script>
 </body>
 </html>
