@@ -33,7 +33,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
+
+  <!-- パスワード設定済みなら CSS で本体を即非表示にして覗き見防止 -->
+  <script>
+    try {
+      if (localStorage.getItem('kakeibo.passhash')) {
+        document.documentElement.classList.add('is-locked');
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <main class="page">
@@ -174,10 +183,48 @@
         <li><b>上限を決める</b>: 「きろく」で月の予算を設定。超えるとやばい顔</li>
         <li><b>消す</b>: 記録の × ボタン</li>
       </ol>
+
+      <h3 class="help-section__title">設定</h3>
+      <div class="settings-row">
+        <span class="settings-row__label">パスワード</span>
+        <span class="settings-row__status" id="passwordStatus">設定なし</span>
+        <div class="settings-row__actions">
+          <button type="button" class="settings-btn" id="pwSetBtn">設定</button>
+          <button type="button" class="settings-btn" id="pwChangeBtn" hidden>変更</button>
+          <button type="button" class="settings-btn settings-btn--ghost" id="pwRemoveBtn" hidden>解除</button>
+        </div>
+      </div>
+
       <p class="help-modal__note">データはこの端末だけに保存されます</p>
     </div>
   </div>
 
-  <script src="app.js?v=10"></script>
+  <!-- ロック画面 (パスワード設定済みのときに前面) -->
+  <div id="lockScreen" class="lock-screen" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+    <div class="lock-screen__inner">
+      <h2 id="lockTitle" class="lock-screen__title">パスワード</h2>
+      <div id="lockDots" class="lock-screen__dots" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <p id="lockHint" class="lock-screen__hint"></p>
+      <div id="lockPad" class="lock-screen__pad">
+        <button type="button" class="lock-key" data-digit="1">1</button>
+        <button type="button" class="lock-key" data-digit="2">2</button>
+        <button type="button" class="lock-key" data-digit="3">3</button>
+        <button type="button" class="lock-key" data-digit="4">4</button>
+        <button type="button" class="lock-key" data-digit="5">5</button>
+        <button type="button" class="lock-key" data-digit="6">6</button>
+        <button type="button" class="lock-key" data-digit="7">7</button>
+        <button type="button" class="lock-key" data-digit="8">8</button>
+        <button type="button" class="lock-key" data-digit="9">9</button>
+        <button type="button" class="lock-key lock-key--ghost" id="lockCancel" hidden>キャンセル</button>
+        <button type="button" class="lock-key" data-digit="0">0</button>
+        <button type="button" class="lock-key lock-key--back" id="lockBack" aria-label="一文字消す">⌫</button>
+      </div>
+      <button type="button" id="lockForgot" class="lock-screen__forgot" hidden>パスワードを忘れた？</button>
+    </div>
+  </div>
+
+  <script src="app.js?v=11"></script>
 </body>
 </html>

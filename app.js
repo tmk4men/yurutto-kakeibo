@@ -4,6 +4,9 @@
   const STORAGE_KEY = 'kakeibo.entries';
   const GRAIN_KEY = 'kakeibo.grainMode'; // 'coarse' | 'fine'
   const LIMITS_KEY = 'kakeibo.limits';   // {necessary?: number, enjoy?: number, waste?: number}
+  const PASS_KEY = 'kakeibo.passhash';   // SHA-256(salt+code) hex string
+  const PASS_SALT = 'yurutto-2026';      // 単純な辞書攻撃を防ぐ程度のソルト
+  const PASS_LENGTH = 4;
   const NEAR_RATIO = 0.8; // 80%以上で「もうすぐ」
   const TAGS = {
     necessary: '必要',
@@ -69,6 +72,18 @@
   const helpModal = document.getElementById('helpModal');
   const helpClose = document.getElementById('helpClose');
   const helpBackdrop = document.getElementById('helpBackdrop');
+  const passwordStatus = document.getElementById('passwordStatus');
+  const pwSetBtn = document.getElementById('pwSetBtn');
+  const pwChangeBtn = document.getElementById('pwChangeBtn');
+  const pwRemoveBtn = document.getElementById('pwRemoveBtn');
+  const lockScreen = document.getElementById('lockScreen');
+  const lockTitle = document.getElementById('lockTitle');
+  const lockHint = document.getElementById('lockHint');
+  const lockDots = document.getElementById('lockDots');
+  const lockPad = document.getElementById('lockPad');
+  const lockBack = document.getElementById('lockBack');
+  const lockCancel = document.getElementById('lockCancel');
+  const lockForgot = document.getElementById('lockForgot');
 
   // ─── 初期化 ──────────────────
   const today = new Date();
@@ -82,6 +97,7 @@
   updateAmountDisplay();
   setActivePane(0, false);
   render();
+  initLock();
   registerServiceWorker();
 
   // ─── イベントバインド ──────────────────
@@ -165,9 +181,41 @@
     toastAction.addEventListener('click', () => {
       if (toastActionHandler) toastActionHandler();
     });
+
+    // パスワード操作
+    pwSetBtn.addEventListener('click', () => startSetPassword());
+    pwChangeBtn.addEventListener('click', () => startChangePassword());
+    pwRemoveBtn.addEventListener('click', () => startRemovePassword());
+
+    // ロック画面の数字パッド
+    lockPad.addEventListener('click', (e) => {
+      const btn = e.target.closest('.lock-key');
+      if (!btn) return;
+      if (btn === lockBack) {
+        lockBuffer = lockBuffer.slice(0, -1);
+        updateLockDots();
+        return;
+      }
+      if (btn === lockCancel) {
+        cancelLockFlow();
+        return;
+      }
+      const d = btn.dataset.digit;
+      if (d === undefined) return;
+      if (lockBuffer.length >= PASS_LENGTH) return;
+      lockBuffer += d;
+      updateLockDots();
+      if (lockBuffer.length === PASS_LENGTH) {
+        // 自動で次へ
+        setTimeout(submitLock, 80);
+      }
+    });
+
+    lockForgot.addEventListener('click', handleForgot);
   }
 
   function openHelp() {
+    refreshPasswordSection();
     helpModal.classList.add('is-open');
   }
   function closeHelp() {
@@ -744,6 +792,215 @@
 
   function formatYen(n) {
     return `¥${n.toLocaleString('ja-JP')}`;
+  }
+
+  // ─── パスワード ──────────────────
+  let lockMode = null;        // 'unlock' | 'set-1' | 'set-2' | 'change-current' | 'change-1' | 'change-2' | 'remove-confirm'
+  let lockBuffer = '';
+  let lockSetupTemp = '';
+  let lockOnSuccess = null;
+
+  async function hashPasscode(code) {
+    const enc = new TextEncoder();
+    const data = enc.encode(PASS_SALT + code);
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  function getStoredHash() {
+    return localStorage.getItem(PASS_KEY) || null;
+  }
+
+  function setStoredHash(hash) {
+    localStorage.setItem(PASS_KEY, hash);
+  }
+
+  function clearStoredHash() {
+    localStorage.removeItem(PASS_KEY);
+  }
+
+  function initLock() {
+    refreshPasswordSection();
+    if (getStoredHash()) {
+      // インラインscriptが is-locked を付けている。ここでロック画面の状態を初期化。
+      showLock({
+        mode: 'unlock',
+        title: 'パスワード',
+        hint: '',
+        allowCancel: false,
+      });
+    }
+  }
+
+  function showLock(opts) {
+    const { mode, title, hint, allowCancel } = opts;
+    lockMode = mode;
+    lockBuffer = '';
+    lockSetupTemp = '';
+    lockTitle.textContent = title || 'パスワード';
+    lockHint.textContent = hint || '';
+    lockCancel.hidden = !allowCancel;
+    lockForgot.hidden = mode !== 'unlock';
+    updateLockDots();
+    if (!document.documentElement.classList.contains('is-locked')) {
+      lockScreen.classList.add('is-show');
+    }
+  }
+
+  function hideLock() {
+    lockScreen.classList.remove('is-show');
+    document.documentElement.classList.remove('is-locked');
+    lockMode = null;
+    lockBuffer = '';
+    lockSetupTemp = '';
+  }
+
+  function updateLockDots() {
+    const dots = lockDots.children;
+    for (let i = 0; i < PASS_LENGTH; i++) {
+      dots[i].classList.toggle('is-filled', i < lockBuffer.length);
+    }
+  }
+
+  function shakeLock() {
+    lockDots.classList.remove('is-shake');
+    void lockDots.offsetWidth;
+    lockDots.classList.add('is-shake');
+    setTimeout(() => lockDots.classList.remove('is-shake'), 350);
+  }
+
+  async function submitLock() {
+    if (lockBuffer.length !== PASS_LENGTH) return;
+    const inputHash = await hashPasscode(lockBuffer);
+
+    if (lockMode === 'unlock') {
+      if (inputHash === getStoredHash()) {
+        hideLock();
+      } else {
+        lockBuffer = '';
+        shakeLock();
+        updateLockDots();
+      }
+      return;
+    }
+
+    if (lockMode === 'set-1' || lockMode === 'change-1') {
+      lockSetupTemp = lockBuffer;
+      lockBuffer = '';
+      lockMode = lockMode === 'set-1' ? 'set-2' : 'change-2';
+      lockTitle.textContent = 'もう一度';
+      lockHint.textContent = '同じ数字をもう一度';
+      updateLockDots();
+      return;
+    }
+
+    if (lockMode === 'set-2' || lockMode === 'change-2') {
+      if (lockBuffer === lockSetupTemp) {
+        const newHash = await hashPasscode(lockBuffer);
+        setStoredHash(newHash);
+        const wasNew = lockMode === 'set-2';
+        hideLock();
+        showToast(wasNew ? 'パスワードを設定したよ' : 'パスワードを変えたよ');
+        refreshPasswordSection();
+      } else {
+        lockBuffer = '';
+        lockSetupTemp = '';
+        lockMode = lockMode === 'set-2' ? 'set-1' : 'change-1';
+        lockTitle.textContent = lockMode === 'set-1' ? 'パスワードを決める' : '新しいパスワード';
+        lockHint.textContent = '一致しなかった、もう一度';
+        shakeLock();
+        updateLockDots();
+      }
+      return;
+    }
+
+    if (lockMode === 'change-current') {
+      if (inputHash === getStoredHash()) {
+        lockBuffer = '';
+        lockMode = 'change-1';
+        lockTitle.textContent = '新しいパスワード';
+        lockHint.textContent = '4桁の数字';
+        updateLockDots();
+      } else {
+        lockBuffer = '';
+        shakeLock();
+        updateLockDots();
+      }
+      return;
+    }
+
+    if (lockMode === 'remove-confirm') {
+      if (inputHash === getStoredHash()) {
+        clearStoredHash();
+        hideLock();
+        showToast('パスワードを解除したよ');
+        refreshPasswordSection();
+      } else {
+        lockBuffer = '';
+        shakeLock();
+        updateLockDots();
+      }
+      return;
+    }
+  }
+
+  function cancelLockFlow() {
+    hideLock();
+  }
+
+  function startSetPassword() {
+    closeHelp();
+    showLock({
+      mode: 'set-1',
+      title: 'パスワードを決める',
+      hint: '4桁の数字',
+      allowCancel: true,
+    });
+  }
+
+  function startChangePassword() {
+    closeHelp();
+    showLock({
+      mode: 'change-current',
+      title: '今のパスワード',
+      hint: '',
+      allowCancel: true,
+    });
+  }
+
+  function startRemovePassword() {
+    closeHelp();
+    showLock({
+      mode: 'remove-confirm',
+      title: 'パスワードを解除',
+      hint: '今のパスワードを入れて',
+      allowCancel: true,
+    });
+  }
+
+  function refreshPasswordSection() {
+    const has = !!getStoredHash();
+    passwordStatus.textContent = has ? '設定中' : '設定なし';
+    pwSetBtn.hidden = has;
+    pwChangeBtn.hidden = !has;
+    pwRemoveBtn.hidden = !has;
+  }
+
+  function handleForgot() {
+    if (
+      confirm(
+        'パスワードを忘れた場合、すべての記録と上限・パスワードを消してリセットします。本当によいですか？'
+      )
+    ) {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(LIMITS_KEY);
+        localStorage.removeItem(PASS_KEY);
+      } catch (e) {}
+      location.reload();
+    }
   }
 
   // ─── Service Worker ──────────────────
