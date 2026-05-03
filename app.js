@@ -2,7 +2,6 @@
   'use strict';
 
   const STORAGE_KEY = 'kakeibo.entries';
-  const GRAIN_KEY = 'kakeibo.grainMode'; // 'coarse' | 'fine'
   const LIMITS_KEY = 'kakeibo.limits';   // {necessary?: number, enjoy?: number, waste?: number}
   const PASS_KEY = 'kakeibo.passhash';   // SHA-256(salt+code) hex string
   const PASS_SALT = 'yurutto-2026';      // 単純な辞書攻撃を防ぐ程度のソルト
@@ -18,15 +17,12 @@
     enjoy: '買ってよかった出費',
     waste: 'ちょっと反省してる出費',
   };
-  const COARSE_CHIPS = [100, 500, 1000, 3000, 5000];
-  const FINE_CHIPS = [10, 50, 100, 500, 1000];
-  const AMOUNT_CAP = 9999999;
+  const AMOUNT_MAX_DIGITS = 7; // 9,999,999 まで
 
   // ─── 状態 ──────────────────
   let entries = loadEntries();
-  let amountHistory = []; // 加算チップの履歴
+  let amountDigits = ''; // 入力された数字を文字列で保持
   let viewYear, viewMonth;
-  let grainMode = localStorage.getItem(GRAIN_KEY) === 'fine' ? 'fine' : 'coarse';
   let limits = loadLimits(); // {necessary, enjoy, waste} — null/undefined は未設定
   let activePane = 0; // 0=書く, 1=きろく
 
@@ -34,7 +30,6 @@
   const dateInput = document.getElementById('dateInput');
   const amountDisplay = document.getElementById('amountDisplay');
   const numpadEl = document.getElementById('numpad');
-  const grainToggle = document.getElementById('grainToggle');
   const tagButtons = document.querySelectorAll('.tag');
   const monthLabel = document.getElementById('monthLabel');
   const prevMonthBtn = document.getElementById('prevMonth');
@@ -102,29 +97,24 @@
 
   // ─── イベントバインド ──────────────────
   function bindEvents() {
-    // テンキー (チップ加算 + ⌫)
+    // テンキー (数字直接入力 + ⌫)
     numpadEl.addEventListener('click', (e) => {
       const btn = e.target.closest('.key');
       if (!btn) return;
       if (btn.classList.contains('key--back')) {
-        amountHistory.pop();
+        amountDigits = amountDigits.slice(0, -1);
+      } else if (btn.classList.contains('key--digit')) {
+        const d = btn.dataset.digit;
+        if (d === undefined) return;
+        // 先頭0は伸ばさない (0,00,001 を避ける)
+        if (amountDigits === '' && d === '0') return;
+        if (amountDigits.length >= AMOUNT_MAX_DIGITS) return;
+        amountDigits += d;
       } else {
-        const add = parseInt(btn.dataset.add, 10);
-        if (!(add > 0)) return;
-        if (currentAmount() + add > AMOUNT_CAP) return;
-        amountHistory.push(add);
+        return;
       }
       updateAmountDisplay();
     });
-
-    // 刻み切替
-    grainToggle.addEventListener('click', () => {
-      grainMode = grainMode === 'coarse' ? 'fine' : 'coarse';
-      grainToggle.setAttribute('aria-pressed', grainMode === 'fine' ? 'true' : 'false');
-      localStorage.setItem(GRAIN_KEY, grainMode);
-      renderNumpad();
-    });
-    grainToggle.setAttribute('aria-pressed', grainMode === 'fine' ? 'true' : 'false');
 
     // タグ: タップで即保存、長押しで意味のヒント
     tagButtons.forEach(bindTagPress);
@@ -318,34 +308,46 @@
   }
 
   function resetForm() {
-    amountHistory = [];
+    amountDigits = '';
     dateInput.value = toISODate(new Date());
     updateAmountDisplay();
   }
 
   // ─── テンキー描画 ──────────────────
   function renderNumpad() {
-    const chips = grainMode === 'fine' ? FINE_CHIPS : COARSE_CHIPS;
     numpadEl.innerHTML = '';
-    for (const v of chips) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'key key--add';
-      btn.dataset.add = String(v);
-      btn.textContent = `+${v}`;
-      numpadEl.appendChild(btn);
+    // 1-9
+    for (let n = 1; n <= 9; n++) {
+      numpadEl.appendChild(makeDigitKey(String(n)));
     }
+    // 左下: 空白セル / 中央下: 0 / 右下: ⌫
+    const blank = document.createElement('span');
+    blank.className = 'key key--blank';
+    blank.setAttribute('aria-hidden', 'true');
+    numpadEl.appendChild(blank);
+
+    numpadEl.appendChild(makeDigitKey('0'));
+
     const back = document.createElement('button');
     back.type = 'button';
     back.className = 'key key--back';
-    back.setAttribute('aria-label', '一個戻す');
+    back.setAttribute('aria-label', '一文字消す');
     back.textContent = '⌫';
     numpadEl.appendChild(back);
   }
 
+  function makeDigitKey(d) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'key key--digit';
+    btn.dataset.digit = d;
+    btn.textContent = d;
+    return btn;
+  }
+
   // ─── 金額表示 ──────────────────
   function currentAmount() {
-    return amountHistory.reduce((a, b) => a + b, 0);
+    return amountDigits === '' ? 0 : parseInt(amountDigits, 10);
   }
 
   function updateAmountDisplay() {

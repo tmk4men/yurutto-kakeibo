@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=13" />
+  <link rel="stylesheet" href="style.css?v=14" />
 
   <!-- パスワード設定済みなら CSS で本体を即非表示にして覗き見防止 -->
   <script>
@@ -74,12 +74,7 @@
               <span id="amountDisplay" class="amount-display is-empty" aria-live="polite" aria-label="金額">0</span>
             </div>
 
-            <div class="numpad-row">
-              <div class="numpad" id="numpad" aria-label="金額入力"></div>
-              <button type="button" class="grain-toggle" id="grainToggle" aria-pressed="false">
-                <span class="grain-toggle__label">ぴったり</span>
-              </button>
-            </div>
+            <div class="numpad" id="numpad" aria-label="金額入力"></div>
 
             <p class="ask">どんなお金？ <span class="ask-hint">タップで書きこむ・長押しで意味</span></p>
             <div class="tags" role="group" aria-label="タグ">
@@ -180,9 +175,8 @@
       <button type="button" class="help-modal__close" id="helpClose" aria-label="閉じる">×</button>
       <h2 id="helpTitle" class="help-modal__title">使い方</h2>
       <ol class="help-list">
-        <li><b>金額</b>: チップを押して足し算（+100, +500…）。⌫で1個もどす</li>
+        <li><b>金額</b>: 数字を押して入力。⌫で一文字もどす</li>
         <li><b>タグ</b>: タップで即書きこむ・長押しで意味のヒント</li>
-        <li><b>ぴったり</b>: テンキー右の小ボタンで +10/+50 の刻みに切替</li>
         <li><b>ページ移動</b>: 上のタブ、または左右にスワイプ</li>
         <li><b>上限を決める</b>: 「きろく」で月の予算を設定。超えるとやばい顔</li>
         <li><b>消す</b>: 記録の × ボタン</li>
@@ -229,6 +223,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>
