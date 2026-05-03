@@ -25,6 +25,13 @@
   let viewYear, viewMonth;
   let limits = loadLimits(); // {necessary, enjoy, waste} — null/undefined は未設定
   let activePane = 0; // 0=書く, 1=きろく
+  let toastTimer = null;
+  let toastActionHandler = null;
+  let hintHideTimer = null;
+  let lockMode = null;        // 'unlock' | 'set-1' | 'set-2' | 'change-current' | 'change-1' | 'change-2' | 'remove-confirm'
+  let lockBuffer = '';
+  let lockSetupTemp = '';
+  let lockOnSuccess = null;
 
   // ─── DOM ──────────────────
   const dateInput = document.getElementById('dateInput');
@@ -357,9 +364,6 @@
   }
 
   // ─── トースト ──────────────────
-  let toastTimer = null;
-  let toastActionHandler = null;
-
   // showToast(msg)
   // showToast(msg, ms, variant)               — 旧シグネチャ互換
   // showToast(msg, { ms, variant, action })   — 新シグネチャ
@@ -391,7 +395,6 @@
   }
 
   // ─── ヒントポップ ──────────────────
-  let hintHideTimer = null;
   function showHint(btn) {
     const tag = btn.dataset.tag;
     const text = HINTS[tag];
@@ -797,11 +800,6 @@
   }
 
   // ─── パスワード ──────────────────
-  let lockMode = null;        // 'unlock' | 'set-1' | 'set-2' | 'change-current' | 'change-1' | 'change-2' | 'remove-confirm'
-  let lockBuffer = '';
-  let lockSetupTemp = '';
-  let lockOnSuccess = null;
-
   async function hashPasscode(code) {
     const enc = new TextEncoder();
     const data = enc.encode(PASS_SALT + code);
