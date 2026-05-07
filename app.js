@@ -18,6 +18,11 @@
     waste: 'ちょっと反省してる出費',
   };
   const AMOUNT_MAX_DIGITS = 7; // 9,999,999 まで
+  const PANE_COUNT = 3;
+  const PANE_PCT = 100 / PANE_COUNT;
+  const LAST_PANE = PANE_COUNT - 1;
+  const AUTO_LOOKBACK_DAYS = 30; // 直近30日から平均を取り、過去30日の空白日を埋める
+  const DOW_KANJI = ['日', '月', '火', '水', '木', '金', '土'];
 
   // ─── 状態 ──────────────────
   let entries = loadEntries();
@@ -32,6 +37,7 @@
   let lockBuffer = '';
   let lockSetupTemp = '';
   let lockOnSuccess = null;
+  let dayModalDate = null;    // 編集モーダルで開いている日付 'YYYY-MM-DD'
 
   // ─── DOM ──────────────────
   const dateInput = document.getElementById('dateInput');
@@ -65,6 +71,18 @@
   const tabButtons = document.querySelectorAll('.tab');
   const panesEl = document.getElementById('panes');
   const paneViewport = document.querySelector('.pane-viewport');
+  const monthLabelCal = document.getElementById('monthLabelCal');
+  const prevMonthCalBtn = document.getElementById('prevMonthCal');
+  const nextMonthCalBtn = document.getElementById('nextMonthCal');
+  const calGrid = document.getElementById('calGrid');
+  const dayModal = document.getElementById('dayModal');
+  const dayModalBackdrop = document.getElementById('dayModalBackdrop');
+  const dayModalClose = document.getElementById('dayModalClose');
+  const dayModalTitle = document.getElementById('dayModalTitle');
+  const dayList = document.getElementById('dayList');
+  const dayEmpty = document.getElementById('dayEmpty');
+  const dayAddAmount = document.getElementById('dayAddAmount');
+  const dayAddTags = document.querySelectorAll('.day-add__tag');
   const toastEl = document.getElementById('toast');
   const toastText = document.getElementById('toastText');
   const toastAction = document.getElementById('toastAction');
@@ -98,6 +116,7 @@
   bindEvents();
   updateAmountDisplay();
   setActivePane(0, false);
+  regenerateAutoEntries();
   render();
   initLock();
   registerServiceWorker();
@@ -131,14 +150,28 @@
       btn.addEventListener('click', () => setActivePane(idx, true));
     });
 
-    // 月ナビ
-    prevMonthBtn.addEventListener('click', () => {
+    // 月ナビ (きろく / カレンダー両方が同じ viewYear/viewMonth を見る)
+    const goPrev = () => {
       ({ year: viewYear, month: viewMonth } = prevMonth(viewYear, viewMonth));
       render();
-    });
-    nextMonthBtn.addEventListener('click', () => {
+    };
+    const goNext = () => {
       ({ year: viewYear, month: viewMonth } = nextMonth(viewYear, viewMonth));
       render();
+    };
+    prevMonthBtn.addEventListener('click', goPrev);
+    nextMonthBtn.addEventListener('click', goNext);
+    prevMonthCalBtn.addEventListener('click', goPrev);
+    nextMonthCalBtn.addEventListener('click', goNext);
+
+    // 日付編集モーダル
+    dayModalClose.addEventListener('click', closeDayModal);
+    dayModalBackdrop.addEventListener('click', closeDayModal);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dayModal.classList.contains('is-open')) closeDayModal();
+    });
+    dayAddTags.forEach((btn) => {
+      btn.addEventListener('click', () => handleDayAdd(btn.dataset.tag));
     });
 
     // 上限の入力
@@ -267,6 +300,7 @@
     const [eY, eM] = entryDate.split('-').map(Number);
     const before = getMonthSums(eY, eM - 1)[tag];
     saveEntry({ tag, amount, date: entryDate });
+    regenerateAutoEntries();
     resetForm();
     flashSaved(btn);
     render();
@@ -420,13 +454,13 @@
     activePane = idx;
     if (animate) panesEl.classList.add('is-animating');
     else panesEl.classList.remove('is-animating');
-    panesEl.style.transform = `translateX(-${50 * idx}%)`;
+    panesEl.style.transform = `translateX(-${PANE_PCT * idx}%)`;
     tabButtons.forEach((t, i) => {
       const active = i === idx;
       t.classList.toggle('is-active', active);
       t.setAttribute('aria-selected', active ? 'true' : 'false');
     });
-    if (idx === 1) hideHint();
+    if (idx !== 0) hideHint();
   }
 
   // ─── 横スワイプ ──────────────────
@@ -462,10 +496,10 @@
         const vw = paneViewport.clientWidth || 1;
         // 端での過剰ドラッグを軽く抑制
         let limited = dx;
-        if ((activePane === 0 && dx > 0) || (activePane === 1 && dx < 0)) {
+        if ((activePane === 0 && dx > 0) || (activePane === LAST_PANE && dx < 0)) {
           limited = dx * 0.3;
         }
-        const offsetPct = -50 * activePane + (limited / vw) * 50;
+        const offsetPct = -PANE_PCT * activePane + (limited / vw) * PANE_PCT;
         panesEl.style.transform = `translateX(${offsetPct}%)`;
       }
     }, { passive: false });
@@ -476,10 +510,10 @@
       if (direction === 'h') {
         const vw = paneViewport.clientWidth || 1;
         const ratio = dx / vw;
-        if (ratio < -0.18 && activePane === 0) {
-          setActivePane(1, true);
-        } else if (ratio > 0.18 && activePane === 1) {
-          setActivePane(0, true);
+        if (ratio < -0.18 && activePane < LAST_PANE) {
+          setActivePane(activePane + 1, true);
+        } else if (ratio > 0.18 && activePane > 0) {
+          setActivePane(activePane - 1, true);
         } else {
           setActivePane(activePane, true);
         }
@@ -495,8 +529,14 @@
     const idx = entries.findIndex((e) => e.id === id);
     if (idx < 0) return;
     const removed = entries[idx];
+    if (removed.auto) {
+      // 自動入力は消してもすぐ再生成されるので、編集に誘導する
+      showToast('自動入力はカレンダーで直してね', 1800);
+      return;
+    }
     entries.splice(idx, 1);
     saveEntries();
+    regenerateAutoEntries();
     render();
     showToast('消した', {
       ms: 4000,
@@ -507,6 +547,7 @@
           if (entries.some((e) => e.id === removed.id)) return;
           entries.splice(Math.min(idx, entries.length), 0, removed);
           saveEntries();
+          regenerateAutoEntries();
           render();
           hideToast();
         },
@@ -514,8 +555,13 @@
     });
   }
 
-  // ─── 描画 (きろく) ──────────────────
+  // ─── 描画 (きろく + カレンダー) ──────────────────
   function render() {
+    renderRecordPane();
+    renderCalendar();
+  }
+
+  function renderRecordPane() {
     monthLabel.textContent = `${viewMonth + 1}月の記録`;
 
     const sums = getMonthSums(viewYear, viewMonth);
@@ -693,6 +739,7 @@
   function renderEntry(e) {
     const li = document.createElement('li');
     li.className = 'entry-item';
+    if (e.auto) li.classList.add('is-auto');
 
     const dateSpan = document.createElement('span');
     dateSpan.className = 'entry-date';
@@ -702,9 +749,19 @@
     amountSpan.className = 'entry-amount';
     amountSpan.textContent = formatYen(e.amount);
 
+    const children = [dateSpan, amountSpan];
+
+    if (e.auto) {
+      const badge = document.createElement('span');
+      badge.className = 'entry-auto-badge';
+      badge.textContent = '自動';
+      children.push(badge);
+    }
+
     const tagSpan = document.createElement('span');
     tagSpan.className = `entry-tag entry-tag--${e.tag}`;
     tagSpan.textContent = TAGS[e.tag];
+    children.push(tagSpan);
 
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
@@ -712,8 +769,9 @@
     delBtn.setAttribute('aria-label', '削除');
     delBtn.textContent = '×';
     delBtn.addEventListener('click', () => handleDelete(e.id));
+    children.push(delBtn);
 
-    li.append(dateSpan, amountSpan, tagSpan, delBtn);
+    li.append(...children);
     return li;
   }
 
@@ -797,6 +855,283 @@
 
   function formatYen(n) {
     return `¥${n.toLocaleString('ja-JP')}`;
+  }
+
+  function formatCalAmount(n) {
+    if (n >= 10000) return `${(n / 10000).toFixed(1)}万`;
+    return n.toLocaleString('ja-JP');
+  }
+
+  function formatDayTitle(isoDate) {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    return `${y}年${m}月${d}日（${DOW_KANJI[dt.getDay()]}）`;
+  }
+
+  function shiftDays(date, delta) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + delta);
+    return d;
+  }
+
+  // ─── 自動入力 ──────────────────
+  // 直近30日の手動データから1日合計平均を計算し、
+  // 過去30日の空白日 (今日除く) に「必要」タグで自動入力する。
+  // 起動時 / 手動エントリの追加・編集・削除のたびに再生成する。
+  function regenerateAutoEntries() {
+    const beforeLen = entries.length;
+    // 既存の自動入力エントリを全削除して、毎回ゼロから再生成 (= 冪等)
+    entries = entries.filter((e) => !e.auto);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateRange = []; // 古い順 → 新しい順
+    for (let i = AUTO_LOOKBACK_DAYS; i >= 1; i--) {
+      dateRange.push(toISODate(shiftDays(today, -i)));
+    }
+    const rangeSet = new Set(dateRange);
+
+    // 直近30日の手動エントリで日別合計を作る
+    const dayTotals = {};
+    for (const e of entries) {
+      if (rangeSet.has(e.date)) {
+        dayTotals[e.date] = (dayTotals[e.date] || 0) + e.amount;
+      }
+    }
+    const recordedDays = Object.keys(dayTotals);
+
+    if (recordedDays.length === 0) {
+      // 直近30日に手動データがゼロなら、自動入力は何も足さない
+      if (beforeLen !== entries.length) saveEntries();
+      return;
+    }
+
+    const sum = Object.values(dayTotals).reduce((a, b) => a + b, 0);
+    const rawAvg = sum / recordedDays.length;
+    // 見やすい単位に丸め: ¥1000以上は¥100単位、それ未満は¥10単位
+    const avg = rawAvg >= 1000
+      ? Math.max(100, Math.round(rawAvg / 100) * 100)
+      : Math.max(10, Math.round(rawAvg / 10) * 10);
+
+    const recordedSet = new Set(recordedDays);
+    let suffix = 0;
+    for (const date of dateRange) {
+      if (!recordedSet.has(date)) {
+        entries.push({
+          id: `auto-${date}-${Date.now()}-${suffix++}`,
+          date,
+          amount: avg,
+          tag: 'necessary',
+          auto: true,
+        });
+      }
+    }
+
+    saveEntries();
+  }
+
+  // ─── カレンダー描画 ──────────────────
+  function renderCalendar() {
+    monthLabelCal.textContent = `${viewMonth + 1}月`;
+    calGrid.innerHTML = '';
+
+    const firstDow = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const todayISO = toISODate(new Date());
+
+    // 月内エントリを日付ごとに集計
+    const byDate = {};
+    for (const e of entries) {
+      if (isInMonth(e.date, viewYear, viewMonth)) {
+        if (!byDate[e.date]) byDate[e.date] = [];
+        byDate[e.date].push(e);
+      }
+    }
+
+    const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7;
+    const mm = String(viewMonth + 1).padStart(2, '0');
+
+    for (let i = 0; i < totalCells; i++) {
+      const day = i - firstDow + 1;
+      const cell = document.createElement('div');
+
+      if (day < 1 || day > daysInMonth) {
+        cell.className = 'cal-cell is-blank';
+        calGrid.appendChild(cell);
+        continue;
+      }
+
+      const dow = i % 7;
+      const dateISO = `${viewYear}-${mm}-${String(day).padStart(2, '0')}`;
+      const dayEntries = byDate[dateISO] || [];
+      const total = dayEntries.reduce((s, x) => s + x.amount, 0);
+      const allAuto = dayEntries.length > 0 && dayEntries.every((x) => x.auto);
+      const isToday = dateISO === todayISO;
+      const isFuture = dateISO > todayISO;
+
+      cell.className = 'cal-cell';
+      if (dow === 0) cell.classList.add('is-sun');
+      if (dow === 6) cell.classList.add('is-sat');
+      if (isToday) cell.classList.add('is-today');
+      if (isFuture) cell.classList.add('is-future');
+      if (allAuto) cell.classList.add('is-auto');
+
+      const dateEl = document.createElement('span');
+      dateEl.className = 'cal-cell__date';
+      dateEl.textContent = String(day);
+      cell.appendChild(dateEl);
+
+      if (total > 0) {
+        const amountEl = document.createElement('span');
+        amountEl.className = 'cal-cell__amount';
+        amountEl.textContent = formatCalAmount(total);
+        cell.appendChild(amountEl);
+
+        if (allAuto) {
+          const autoEl = document.createElement('span');
+          autoEl.className = 'cal-cell__auto';
+          autoEl.textContent = '自動';
+          cell.appendChild(autoEl);
+        }
+      }
+
+      cell.addEventListener('click', () => openDayModal(dateISO));
+      calGrid.appendChild(cell);
+    }
+  }
+
+  // ─── 日付編集モーダル ──────────────────
+  function openDayModal(date) {
+    dayModalDate = date;
+    dayModalTitle.textContent = formatDayTitle(date);
+    dayAddAmount.value = '';
+    renderDayList();
+    dayModal.classList.add('is-open');
+  }
+
+  function closeDayModal() {
+    dayModal.classList.remove('is-open');
+    dayModalDate = null;
+  }
+
+  function renderDayList() {
+    if (!dayModalDate) return;
+    dayList.innerHTML = '';
+    const dayEntries = entries
+      .filter((e) => e.date === dayModalDate)
+      .sort((a, b) => a.id.localeCompare(b.id));
+    for (const e of dayEntries) {
+      dayList.appendChild(renderDayItem(e));
+    }
+    dayEmpty.style.display = dayEntries.length === 0 ? 'block' : 'none';
+  }
+
+  function renderDayItem(entry) {
+    const li = document.createElement('li');
+    li.className = 'day-list__item';
+    if (entry.auto) li.classList.add('is-auto');
+
+    // 金額
+    const amountWrap = document.createElement('div');
+    amountWrap.className = 'day-list__amount-wrap';
+    const yen = document.createElement('span');
+    yen.className = 'day-list__yen';
+    yen.textContent = '¥';
+    const amountInput = document.createElement('input');
+    amountInput.type = 'number';
+    amountInput.inputMode = 'numeric';
+    amountInput.min = '0';
+    amountInput.step = '100';
+    amountInput.className = 'day-list__amount';
+    amountInput.value = String(entry.amount);
+    amountInput.addEventListener('change', () => {
+      const v = parseInt(amountInput.value, 10);
+      if (Number.isFinite(v) && v > 0) {
+        updateEntry(entry.id, { amount: v });
+      } else {
+        amountInput.value = String(entry.amount);
+      }
+    });
+    amountWrap.append(yen, amountInput);
+    li.appendChild(amountWrap);
+
+    // タグ (3つのセグメント)
+    const tagGroup = document.createElement('div');
+    tagGroup.className = 'day-list__tags';
+    for (const tag of ['necessary', 'enjoy', 'waste']) {
+      const tagBtn = document.createElement('button');
+      tagBtn.type = 'button';
+      tagBtn.className = `day-list__tag day-list__tag--${tag}`;
+      if (entry.tag === tag) tagBtn.classList.add('is-active');
+      tagBtn.textContent = TAGS[tag];
+      tagBtn.addEventListener('click', () => {
+        if (entry.tag === tag && !entry.auto) return; // 既に同じタグで手動なら何もしない
+        updateEntry(entry.id, { tag });
+      });
+      tagGroup.appendChild(tagBtn);
+    }
+    li.appendChild(tagGroup);
+
+    if (entry.auto) {
+      const badge = document.createElement('span');
+      badge.className = 'day-list__auto';
+      badge.textContent = '自動';
+      li.appendChild(badge);
+    }
+
+    // 削除
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'day-list__delete';
+    delBtn.setAttribute('aria-label', '削除');
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', () => deleteEntryFromModal(entry.id));
+    li.appendChild(delBtn);
+
+    return li;
+  }
+
+  function updateEntry(id, patch) {
+    const idx = entries.findIndex((e) => e.id === id);
+    if (idx < 0) return;
+    // 編集された時点で「自動」フラグは外す (= 手動扱いに昇格)
+    entries[idx] = { ...entries[idx], ...patch, auto: false };
+    saveEntries();
+    regenerateAutoEntries();
+    render();
+    renderDayList();
+  }
+
+  function deleteEntryFromModal(id) {
+    const idx = entries.findIndex((e) => e.id === id);
+    if (idx < 0) return;
+    const removed = entries[idx];
+    if (removed.auto) {
+      // 削除しても再生成されるので、金額やタグを直してもらう
+      showToast('金額を直すと自動が外れるよ', 1800);
+      return;
+    }
+    entries.splice(idx, 1);
+    saveEntries();
+    regenerateAutoEntries();
+    render();
+    renderDayList();
+  }
+
+  function handleDayAdd(tag) {
+    if (!dayModalDate) return;
+    const v = parseInt(dayAddAmount.value, 10);
+    if (!(Number.isFinite(v) && v > 0)) {
+      showToast('金額を入れて');
+      return;
+    }
+    saveEntry({ tag, amount: v, date: dayModalDate });
+    regenerateAutoEntries();
+    dayAddAmount.value = '';
+    render();
+    renderDayList();
+    showToast('書いた！');
   }
 
   // ─── パスワード ──────────────────

@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=16" />
+  <link rel="stylesheet" href="style.css?v=17" />
 
   <!-- パスワード設定済みなら CSS で本体を即非表示にして覗き見防止 -->
   <script>
@@ -56,6 +56,7 @@
       <div class="tabs" role="tablist">
         <button type="button" class="tab is-active" role="tab" aria-selected="true" data-pane="0">書く</button>
         <button type="button" class="tab" role="tab" aria-selected="false" data-pane="1">きろく</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" data-pane="2">カレンダー</button>
       </div>
     </header>
 
@@ -157,6 +158,28 @@
             <p id="emptyMsg" class="empty-msg">まだ なにも書いていません</p>
           </div>
         </section>
+
+        <!-- ──── カレンダーページ ──── -->
+        <section class="pane" role="tabpanel" aria-label="カレンダー">
+          <div class="cal">
+            <div class="cal-nav">
+              <button type="button" id="prevMonthCal" class="month-arrow" aria-label="前の月">‹</button>
+              <h2 id="monthLabelCal" class="month-label">5月</h2>
+              <button type="button" id="nextMonthCal" class="month-arrow" aria-label="次の月">›</button>
+            </div>
+            <div class="cal-week" aria-hidden="true">
+              <span class="cal-week__day cal-week__day--sun">日</span>
+              <span class="cal-week__day">月</span>
+              <span class="cal-week__day">火</span>
+              <span class="cal-week__day">水</span>
+              <span class="cal-week__day">木</span>
+              <span class="cal-week__day">金</span>
+              <span class="cal-week__day cal-week__day--sat">土</span>
+            </div>
+            <div id="calGrid" class="cal-grid"></div>
+            <p class="cal-hint">日をタップで内容を見る・なおす<br><span class="cal-hint__auto">空白の日は直近30日の平均で自動入力</span></p>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -179,7 +202,8 @@
         <li><b>タグ</b>: タップで即書きこむ・長押しで意味のヒント</li>
         <li><b>ページ移動</b>: 上のタブ、または左右にスワイプ</li>
         <li><b>上限を決める</b>: 「きろく」で月の予算を設定。超えるとやばい顔</li>
-        <li><b>消す</b>: 記録の × ボタン</li>
+        <li><b>カレンダー</b>: 入力していない日は直近30日の平均で自動入力。日をタップすると編集できる</li>
+        <li><b>消す</b>: 記録の × ボタン (自動はカレンダーから直す)</li>
       </ol>
 
       <h3 class="help-section__title">設定</h3>
@@ -194,6 +218,29 @@
       </div>
 
       <p class="help-modal__note">データはこの端末だけに保存されます</p>
+    </div>
+  </div>
+
+  <!-- 日付編集モーダル -->
+  <div id="dayModal" class="day-modal" role="dialog" aria-modal="true" aria-labelledby="dayModalTitle">
+    <div class="day-modal__backdrop" id="dayModalBackdrop"></div>
+    <div class="day-modal__sheet" role="document">
+      <button type="button" class="day-modal__close" id="dayModalClose" aria-label="閉じる">×</button>
+      <h2 id="dayModalTitle" class="day-modal__title">日付</h2>
+      <ul id="dayList" class="day-list"></ul>
+      <p id="dayEmpty" class="day-empty">この日の記録はまだないよ</p>
+      <div class="day-add">
+        <p class="day-add__title">この日に追加する</p>
+        <div class="day-add__amount">
+          <span class="yen">¥</span>
+          <input type="number" id="dayAddAmount" inputmode="numeric" min="0" step="100" placeholder="0" />
+        </div>
+        <div class="day-add__tags">
+          <button type="button" class="day-add__tag day-add__tag--necessary" data-tag="necessary">必要</button>
+          <button type="button" class="day-add__tag day-add__tag--enjoy" data-tag="enjoy">楽しみ</button>
+          <button type="button" class="day-add__tag day-add__tag--waste" data-tag="waste">ムダかも</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -223,6 +270,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
