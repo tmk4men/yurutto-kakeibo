@@ -24,6 +24,11 @@
   const AUTO_LOOKBACK_DAYS = 30; // 直近30日から平均を取り、過去30日の空白日を埋める
   const DOW_KANJI = ['日', '月', '火', '水', '木', '金', '土'];
 
+  // Google AdMob (Android アプリ) — Web版はプレースホルダ表示
+  const ADMOB_CONFIG = {
+    bannerId: 'ca-app-pub-5634961953346923/6932288160',
+  };
+
   // ─── 状態 ──────────────────
   let entries = loadEntries();
   let amountDigits = ''; // 入力された数字を文字列で保持
@@ -119,6 +124,7 @@
   regenerateAutoEntries();
   render();
   initLock();
+  initAds();
   registerServiceWorker();
 
   // ─── イベントバインド ──────────────────
@@ -1336,6 +1342,74 @@
       } catch (e) {}
       location.reload();
     }
+  }
+
+  // ─── バナー広告 (AdMob / Webプレースホルダ) ──────────────────
+  function isNativeApp() {
+    const cap = window.Capacitor;
+    return Boolean(cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform());
+  }
+
+  function showWebAdPlaceholders() {
+    document.querySelectorAll('.ad-banner').forEach((el) => el.classList.add('is-placeholder'));
+  }
+
+  function setNativeAdInsets(bannerHeight) {
+    const footnote = document.querySelector('.footnote');
+    const footnoteHeight = footnote ? Math.ceil(footnote.getBoundingClientRect().height) : 22;
+    document.documentElement.style.setProperty('--native-ad-height', `${bannerHeight}px`);
+    document.documentElement.style.setProperty('--footnote-height', `${footnoteHeight}px`);
+  }
+
+  async function initNativeAdMob() {
+    const cap = window.Capacitor;
+    if (!cap?.registerPlugin) {
+      showWebAdPlaceholders();
+      return;
+    }
+
+    document.documentElement.classList.add('is-native-ad');
+    const AdMob = cap.registerPlugin('AdMob');
+
+    try {
+      await AdMob.initialize();
+
+      try {
+        const consentInfo = await AdMob.requestConsentInfo();
+        if (consentInfo?.isConsentFormAvailable && consentInfo?.status === 'REQUIRED') {
+          await AdMob.showConsentForm();
+        }
+      } catch (e) {
+        // UMP 未設定でも広告表示は続行
+      }
+
+      AdMob.addListener('bannerAdSizeChanged', (size) => {
+        setNativeAdInsets(size?.height ?? 50);
+      });
+
+      const footnote = document.querySelector('.footnote');
+      const footnoteHeight = footnote ? Math.ceil(footnote.getBoundingClientRect().height) : 0;
+
+      await AdMob.showBanner({
+        adId: ADMOB_CONFIG.bannerId,
+        adSize: 'ADAPTIVE_BANNER',
+        position: 'BOTTOM_CENTER',
+        margin: footnoteHeight,
+      });
+
+      setNativeAdInsets(50);
+    } catch (e) {
+      document.documentElement.classList.remove('is-native-ad');
+      showWebAdPlaceholders();
+    }
+  }
+
+  function initAds() {
+    if (isNativeApp()) {
+      initNativeAdMob();
+      return;
+    }
+    showWebAdPlaceholders();
   }
 
   // ─── Service Worker ──────────────────

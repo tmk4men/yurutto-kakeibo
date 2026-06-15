@@ -55,6 +55,11 @@ input[type="number"], input[type="date"] {
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
+  /* Android 15+ エッジツーエッジ: システムバーと重ならないよう余白確保 */
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* ─── 上部 (タイトル + タブ) ─── */
@@ -167,11 +172,54 @@ input[type="number"], input[type="date"] {
   overflow: hidden;
 }
 
+/* ─── バナー広告 (各タブ下部) ─── */
+.ad-banner {
+  flex-shrink: 0;
+  margin-top: auto;
+  margin-left: -22px;
+  margin-right: -22px;
+  width: calc(100% + 44px);
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.35);
+  border-top: 1px dashed var(--line);
+}
+
+.ad-banner.is-placeholder {
+  background: rgba(217, 207, 182, 0.25);
+}
+
+.ad-banner.is-placeholder::after {
+  content: '広告';
+  font-size: 11px;
+  color: var(--ink-soft);
+  opacity: 0.45;
+  letter-spacing: 0.12em;
+  pointer-events: none;
+}
+
+.ad-banner.is-hidden {
+  display: none;
+}
+
+/* Android ネイティブ AdMob — 画面下部に重ね表示、WebView側は余白確保 */
+html.is-native-ad .ad-banner {
+  display: none;
+}
+
+html.is-native-ad .page {
+  padding-bottom: calc(var(--native-ad-height, 50px) + var(--footnote-height, 22px) + env(safe-area-inset-bottom));
+}
+
 /* ─── 入力 (書くペイン) ─── */
 .entry {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   gap: 10px;
 }
 
@@ -712,7 +760,7 @@ input[type="number"], input[type="date"] {
 .cal {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
   min-height: 0;
   padding-top: 2px;
 }
@@ -1538,4 +1586,9 @@ input[type="number"], input[type="date"] {
   .pane { padding: 10px 14px 0; }
   .topbar { padding: 6px 14px 0; }
   .footnote { padding: 4px 14px 6px; }
+  .ad-banner {
+    margin-left: -14px;
+    margin-right: -14px;
+    width: calc(100% + 28px);
+  }
 }

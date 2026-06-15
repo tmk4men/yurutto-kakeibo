@@ -4,4 +4,5 @@
     <string name="title_activity_main">ゆとり家計簿</string>
     <string name="package_name">com.tmk4men.yuruttokakeibo</string>
     <string name="custom_url_scheme">com.tmk4men.yuruttokakeibo</string>
+    <string name="admob_app_id">ca-app-pub-5634961953346923~4506272128</string>
 </resources>
