@@ -211,7 +211,12 @@ html.is-native-ad .ad-banner {
 }
 
 html.is-native-ad .page {
-  padding-bottom: calc(var(--native-ad-height, 50px) + var(--footnote-height, 22px) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--native-ad-height, 50px) + var(--footnote-height, 22px) + env(safe-area-inset-bottom) + 8px);
+}
+
+/* ネイティブ広告バナー表示中は、トースト(もどすボタン付き)を広告の上へ逃がす */
+html.is-native-ad .toast {
+  bottom: calc(var(--native-ad-height, 50px) + var(--footnote-height, 22px) + env(safe-area-inset-bottom) + 16px);
 }
 
 /* ─── 入力 (書くペイン) ─── */

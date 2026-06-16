@@ -27,6 +27,11 @@
   // Google AdMob (Android アプリ) — Web版はプレースホルダ表示
   const ADMOB_CONFIG = {
     bannerId: 'ca-app-pub-5634961953346923/6932288160',
+    // 診断用: true にすると Google公式テスト広告IDで動作確認できる（必ず広告が出る）
+    useTestAd: false,
+    testBannerId: 'ca-app-pub-3940256099942544/6300978111',
+    // 診断用: true にすると広告の状態を画面上部のバーに表示する
+    debug: false,
   };
 
   // ─── 状態 ──────────────────
@@ -1356,22 +1361,42 @@
 
   function setNativeAdInsets(bannerHeight) {
     const footnote = document.querySelector('.footnote');
-    const footnoteHeight = footnote ? Math.ceil(footnote.getBoundingClientRect().height) : 22;
+    const footnoteHeight = footnote ? Math.ceil(footnote.getBoundingClientRect().height) : 0;
     document.documentElement.style.setProperty('--native-ad-height', `${bannerHeight}px`);
     document.documentElement.style.setProperty('--footnote-height', `${footnoteHeight}px`);
   }
 
+  // 診断用: 画面上部に状態を表示するバー
+  function adDiag(msg) {
+    if (!ADMOB_CONFIG.debug) return;
+    let d = document.getElementById('addiag');
+    if (!d) {
+      d = document.createElement('div');
+      d.id = 'addiag';
+      d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#2b3a55;color:#fff;font-size:11px;line-height:1.4;padding:3px 6px;text-align:center;';
+      document.body.appendChild(d);
+    }
+    d.textContent = msg;
+  }
+
   async function initNativeAdMob() {
     const cap = window.Capacitor;
-    if (!cap?.registerPlugin) {
+    // このランタイムでは registerPlugin が無い場合があるため、
+    // 登録済みプラグインは window.Capacitor.Plugins から取得する
+    const AdMob =
+      (cap && cap.Plugins && cap.Plugins.AdMob) ||
+      (cap && typeof cap.registerPlugin === 'function' ? cap.registerPlugin('AdMob') : null);
+
+    if (!AdMob) {
+      adDiag('[AD] AdMobプラグイン取得失敗');
       showWebAdPlaceholders();
       return;
     }
 
     document.documentElement.classList.add('is-native-ad');
-    const AdMob = cap.registerPlugin('AdMob');
 
     try {
+      adDiag('[AD] calling initialize');
       await AdMob.initialize();
 
       try {
@@ -1385,26 +1410,38 @@
 
       AdMob.addListener('bannerAdSizeChanged', (size) => {
         setNativeAdInsets(size?.height ?? 50);
+        adDiag(`[AD] size h=${size?.height}`);
       });
+      AdMob.addListener('bannerAdLoaded', () => adDiag('[AD] loaded OK'));
 
-      const footnote = document.querySelector('.footnote');
-      const footnoteHeight = footnote ? Math.ceil(footnote.getBoundingClientRect().height) : 0;
+      // 診断用: 広告の読込失敗(no-fill 等)を捕捉
+      AdMob.addListener('bannerAdFailedToLoad', (err) => {
+        adDiag(`[AD] failLoad code=${err?.code ?? '?'} ${err?.message ?? ''}`);
+      });
+      adDiag('[AD] init ok, calling showBanner');
 
+      const adId = ADMOB_CONFIG.useTestAd ? ADMOB_CONFIG.testBannerId : ADMOB_CONFIG.bannerId;
       await AdMob.showBanner({
-        adId: ADMOB_CONFIG.bannerId,
+        adId,
         adSize: 'ADAPTIVE_BANNER',
         position: 'BOTTOM_CENTER',
-        margin: footnoteHeight,
+        // 底に密着させる。持ち上げると本文最下部(タグ)に被るため margin は 0
+        margin: 0,
+        isTesting: ADMOB_CONFIG.useTestAd,
       });
 
+      adDiag('[AD] showBanner resolved (waiting fill)');
       setNativeAdInsets(50);
     } catch (e) {
+      adDiag(`[AD] 失敗: ${e?.message ?? e}`);
       document.documentElement.classList.remove('is-native-ad');
       showWebAdPlaceholders();
     }
   }
 
   function initAds() {
+    const cap = window.Capacitor;
+    adDiag(`[AD] initAds cap=${!!cap} native=${!!(cap && cap.isNativePlatform && cap.isNativePlatform())} reg=${!!(cap && cap.registerPlugin)}`);
     if (isNativeApp()) {
       initNativeAdMob();
       return;
