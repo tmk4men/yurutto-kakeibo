@@ -26,7 +26,12 @@
 
   // Google AdMob (Android アプリ) — Web版はプレースホルダ表示
   const ADMOB_CONFIG = {
-    bannerId: 'ca-app-pub-5634961953346923/6932288160',
+    // タブごとのバナー広告ユニットID (0=書く, 1=きろく, 2=カレンダー)
+    bannerIds: [
+      'ca-app-pub-5634961953346923/6932288160', // 書く
+      'ca-app-pub-5634961953346923/2816130946', // きろく (家計簿2)
+      'ca-app-pub-5634961953346923/3498657223', // カレンダー (家計簿3)
+    ],
     // 診断用: true にすると Google公式テスト広告IDで動作確認できる（必ず広告が出る）
     useTestAd: false,
     testBannerId: 'ca-app-pub-3940256099942544/6300978111',
@@ -40,6 +45,10 @@
   let viewYear, viewMonth;
   let limits = loadLimits(); // {necessary, enjoy, waste} — null/undefined は未設定
   let activePane = 0; // 0=書く, 1=きろく
+  let nativeAdMob = null; // AdMob プラグイン参照 (バナー貼り替え用)
+  let currentBannerPane = -1; // 現在バナーを表示しているタブ
+  let bannerBusy = false; // 貼り替え処理中フラグ
+  let pendingBannerPane = null; // 処理中に届いた次の切替先 (連続スワイプ対策)
   let toastTimer = null;
   let toastActionHandler = null;
   let hintHideTimer = null;
@@ -472,6 +481,7 @@
       t.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     if (idx !== 0) hideHint();
+    showBannerForPane(idx);
   }
 
   // ─── 横スワイプ ──────────────────
@@ -1393,6 +1403,7 @@
       return;
     }
 
+    nativeAdMob = AdMob;
     document.documentElement.classList.add('is-native-ad');
 
     try {
@@ -1420,8 +1431,37 @@
       });
       adDiag('[AD] init ok, calling showBanner');
 
-      const adId = ADMOB_CONFIG.useTestAd ? ADMOB_CONFIG.testBannerId : ADMOB_CONFIG.bannerId;
-      await AdMob.showBanner({
+      // 現在のタブに対応したバナーを表示 (以後はタブ切替で貼り替え)
+      setNativeAdInsets(50);
+      await showBannerForPane(activePane);
+
+      adDiag('[AD] showBanner resolved (waiting fill)');
+    } catch (e) {
+      adDiag(`[AD] 失敗: ${e?.message ?? e}`);
+      document.documentElement.classList.remove('is-native-ad');
+      nativeAdMob = null;
+      showWebAdPlaceholders();
+    }
+  }
+
+  // タブに応じてバナー広告を貼り替える。
+  // IDを変えるには一度バナーを消して再表示する必要がある。
+  async function showBannerForPane(idx) {
+    if (!nativeAdMob) return; // 初期化前 / Web は何もしない
+    if (idx === currentBannerPane) return; // 同じタブなら貼り替え不要
+    if (bannerBusy) { pendingBannerPane = idx; return; } // 連続スワイプは最後だけ反映
+
+    bannerBusy = true;
+    currentBannerPane = idx;
+    const ids = ADMOB_CONFIG.bannerIds;
+    const adId = ADMOB_CONFIG.useTestAd
+      ? ADMOB_CONFIG.testBannerId
+      : (ids[idx] || ids[0]);
+
+    try {
+      // 既存バナーがあれば貼り替えのため一度消す (初回は何も無くてOK)
+      try { await nativeAdMob.removeBanner(); } catch (e) { /* 初回は無視 */ }
+      await nativeAdMob.showBanner({
         adId,
         adSize: 'ADAPTIVE_BANNER',
         position: 'BOTTOM_CENTER',
@@ -1429,13 +1469,19 @@
         margin: 0,
         isTesting: ADMOB_CONFIG.useTestAd,
       });
-
-      adDiag('[AD] showBanner resolved (waiting fill)');
-      setNativeAdInsets(50);
+      adDiag(`[AD] pane=${idx} ${adId.slice(-6)}`);
     } catch (e) {
-      adDiag(`[AD] 失敗: ${e?.message ?? e}`);
-      document.documentElement.classList.remove('is-native-ad');
-      showWebAdPlaceholders();
+      adDiag(`[AD] switch失敗: ${e?.message ?? e}`);
+    } finally {
+      bannerBusy = false;
+      // 処理中に別タブへ移っていたら、最新の状態に追従する
+      if (pendingBannerPane !== null && pendingBannerPane !== currentBannerPane) {
+        const next = pendingBannerPane;
+        pendingBannerPane = null;
+        showBannerForPane(next);
+      } else {
+        pendingBannerPane = null;
+      }
     }
   }
 
