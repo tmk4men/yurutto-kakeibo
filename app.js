@@ -1487,9 +1487,14 @@
 
   function initAds() {
     const cap = window.Capacitor;
-    adDiag(`[AD] initAds cap=${!!cap} native=${!!(cap && cap.isNativePlatform && cap.isNativePlatform())} reg=${!!(cap && cap.registerPlugin)}`);
+    const platform = cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : 'web';
+    adDiag(`[AD] initAds cap=${!!cap} native=${!!(cap && cap.isNativePlatform && cap.isNativePlatform())} platform=${platform}`);
     if (isNativeApp()) {
-      initNativeAdMob();
+      // iOS版は当面広告なしで公開する。AdMob SDKの初期化は Android のみ。
+      // (iOSで初期化すると GADApplicationIdentifier / ATT 対応が必要になるため)
+      if (platform === 'android') {
+        initNativeAdMob();
+      }
       return;
     }
     showWebAdPlaceholders();
