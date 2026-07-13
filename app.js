@@ -3,6 +3,9 @@
 
   const STORAGE_KEY = 'kakeibo.entries';
   const LIMITS_KEY = 'kakeibo.limits';   // {necessary?: number, enjoy?: number, waste?: number}
+  const PREMIUM_KEY = 'kakeibo.premium'; // '1' なら購入済み (エンタイトルメント・キャッシュ)
+  const PREMIUM_PRODUCT_ID = 'com.tmk4men.yuruttokakeibo.premium'; // 非消費型 買い切り
+  const FREE_LOOKBACK_DAYS = 14;         // 無料は直近2週間だけ閲覧できる
   const PASS_KEY = 'kakeibo.passhash';   // SHA-256(salt+code) hex string
   const PASS_SALT = 'yurutto-2026';      // 単純な辞書攻撃を防ぐ程度のソルト
   const PASS_LENGTH = 4;
@@ -18,7 +21,7 @@
     waste: 'ちょっと反省してる出費',
   };
   const AMOUNT_MAX_DIGITS = 7; // 9,999,999 まで
-  const PANE_COUNT = 3;
+  const PANE_COUNT = 4;
   const PANE_PCT = 100 / PANE_COUNT;
   const LAST_PANE = PANE_COUNT - 1;
   const AUTO_LOOKBACK_DAYS = 30; // 直近30日から平均を取り、過去30日の空白日を埋める
@@ -57,6 +60,8 @@
   let lockSetupTemp = '';
   let lockOnSuccess = null;
   let dayModalDate = null;    // 編集モーダルで開いている日付 'YYYY-MM-DD'
+  let isPremium = loadPremium(); // 買い切りプレミアムの有効状態 (localStorageキャッシュ + ストア照会)
+  let billingBusy = false;    // 購入/復元の処理中フラグ (課金は反映までタイムラグあり)
 
   // ─── DOM ──────────────────
   const dateInput = document.getElementById('dateInput');
@@ -123,6 +128,19 @@
   const lockBack = document.getElementById('lockBack');
   const lockCancel = document.getElementById('lockCancel');
   const lockForgot = document.getElementById('lockForgot');
+  // レポート / プレミアム
+  const reportBody = document.getElementById('reportBody');
+  const trendChart = document.getElementById('trendChart');
+  const reportBreakdown = document.getElementById('reportBreakdown');
+  const reportStats = document.getElementById('reportStats');
+  const proLock = document.getElementById('proLock');
+  const proBuyBtn = document.getElementById('proBuyBtn');
+  const proRestoreBtn = document.getElementById('proRestoreBtn');
+  const proStatus = document.getElementById('proStatus');
+  const recordProCta = document.getElementById('recordProCta');
+  const premiumStatus = document.getElementById('premiumStatus');
+  const premiumBuyBtn = document.getElementById('premiumBuyBtn');
+  const premiumRestoreBtn = document.getElementById('premiumRestoreBtn');
 
   // ─── 初期化 ──────────────────
   const today = new Date();
@@ -172,10 +190,12 @@
 
     // 月ナビ (きろく / カレンダー両方が同じ viewYear/viewMonth を見る)
     const goPrev = () => {
+      if (!isPremium) { promptPremium(); return; }
       ({ year: viewYear, month: viewMonth } = prevMonth(viewYear, viewMonth));
       render();
     };
     const goNext = () => {
+      if (!isPremium) { promptPremium(); return; }
       ({ year: viewYear, month: viewMonth } = nextMonth(viewYear, viewMonth));
       render();
     };
@@ -262,6 +282,22 @@
     });
 
     lockForgot.addEventListener('click', handleForgot);
+
+    // プレミアム (購入 / 復元)
+    const buy = () => Billing.purchase();
+    const restore = () => Billing.restore();
+    proBuyBtn.addEventListener('click', buy);
+    premiumBuyBtn.addEventListener('click', buy);
+    proRestoreBtn.addEventListener('click', restore);
+    premiumRestoreBtn.addEventListener('click', restore);
+    recordProCta.addEventListener('click', () => setActivePane(3, true));
+
+    // Web/PWA (課金の無い環境) では動作確認用に購入状態を切り替えられる隠し操作:
+    // 設定の「プレミアム」ラベルを5回タップ
+    if (!isNativeApp()) enableDevPremiumToggle();
+
+    refreshPremiumUI();
+    // Billing.init() は Billing 定義後 (ファイル末尾) で呼ぶ (const の TDZ 回避)
   }
 
   function openHelp() {
@@ -580,23 +616,39 @@
   function render() {
     renderRecordPane();
     renderCalendar();
+    renderReport();
   }
 
   function renderRecordPane() {
-    monthLabel.textContent = `${viewMonth + 1}月の記録`;
+    let list, sums, prevSums;
 
-    const sums = getMonthSums(viewYear, viewMonth);
-    const prev = prevMonth(viewYear, viewMonth);
-    const prevSums = getMonthSums(prev.year, prev.month);
+    if (isPremium) {
+      monthLabel.textContent = `${viewMonth + 1}月の記録`;
+      sums = getMonthSums(viewYear, viewMonth);
+      const prev = prevMonth(viewYear, viewMonth);
+      prevSums = getMonthSums(prev.year, prev.month);
+      list = entries.filter((e) => isInMonth(e.date, viewYear, viewMonth));
+    } else {
+      // 無料: 直近2週間 (ロールング) のみ
+      const cutoff = freeCutoffISO();
+      monthLabel.textContent = '直近2週間';
+      list = entries.filter((e) => e.date >= cutoff);
+      sums = sumByTag(list);
+      prevSums = null;
+    }
 
     sumNecessary.textContent = formatYen(sums.necessary);
     sumEnjoy.textContent = formatYen(sums.enjoy);
     sumWaste.textContent = formatYen(sums.waste);
     sumTotal.textContent = formatYen(sums.necessary + sums.enjoy + sums.waste);
 
-    setDiff(diffNecessary, sums.necessary, prevSums.necessary);
-    setDiff(diffEnjoy, sums.enjoy, prevSums.enjoy);
-    setDiff(diffWaste, sums.waste, prevSums.waste);
+    if (isPremium && prevSums) {
+      setDiff(diffNecessary, sums.necessary, prevSums.necessary);
+      setDiff(diffEnjoy, sums.enjoy, prevSums.enjoy);
+      setDiff(diffWaste, sums.waste, prevSums.waste);
+    } else {
+      clearDiff(diffNecessary); clearDiff(diffEnjoy); clearDiff(diffWaste);
+    }
 
     setLimitState('necessary', sums.necessary);
     setLimitState('enjoy', sums.enjoy);
@@ -605,12 +657,17 @@
     renderRatioBar(sums);
     renderStatusBubble(sums);
 
-    const monthly = entries
-      .filter((e) => isInMonth(e.date, viewYear, viewMonth))
-      .sort((a, b) => (a.date === b.date ? b.id.localeCompare(a.id) : b.date.localeCompare(a.date)));
+    // 月ナビ・解放CTAの出し分け (無料は全月ブラウズ不可)
+    prevMonthBtn.classList.toggle('is-pro-locked', !isPremium);
+    nextMonthBtn.classList.toggle('is-pro-locked', !isPremium);
+    recordProCta.hidden = isPremium;
+
+    const sorted = list.sort((a, b) =>
+      a.date === b.date ? b.id.localeCompare(a.id) : b.date.localeCompare(a.date)
+    );
 
     entryList.innerHTML = '';
-    if (monthly.length === 0) {
+    if (sorted.length === 0) {
       emptyMsg.classList.remove('is-hidden');
       entryList.classList.add('is-hidden');
       return;
@@ -618,9 +675,14 @@
     emptyMsg.classList.add('is-hidden');
     entryList.classList.remove('is-hidden');
 
-    for (const e of monthly) {
+    for (const e of sorted) {
       entryList.appendChild(renderEntry(e));
     }
+  }
+
+  function clearDiff(el) {
+    el.textContent = '';
+    el.classList.remove('is-up', 'is-down');
   }
 
   function setDiff(el, curr, prev) {
@@ -957,6 +1019,11 @@
     monthLabelCal.textContent = `${viewMonth + 1}月`;
     calGrid.innerHTML = '';
 
+    // 無料は全月ブラウズ不可 (矢印ロック) + 2週間より前の日はロック
+    prevMonthCalBtn.classList.toggle('is-pro-locked', !isPremium);
+    nextMonthCalBtn.classList.toggle('is-pro-locked', !isPremium);
+    const cutoff = freeCutoffISO();
+
     const firstDow = new Date(viewYear, viewMonth, 1).getDay();
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
     const todayISO = toISODate(new Date());
@@ -991,12 +1058,15 @@
       const isToday = dateISO === todayISO;
       const isFuture = dateISO > todayISO;
 
+      const locked = !isPremium && dateISO < cutoff;
+
       cell.className = 'cal-cell';
       if (dow === 0) cell.classList.add('is-sun');
       if (dow === 6) cell.classList.add('is-sat');
       if (isToday) cell.classList.add('is-today');
       if (isFuture) cell.classList.add('is-future');
       if (allAuto) cell.classList.add('is-auto');
+      if (locked) cell.classList.add('is-pro-locked');
 
       const dateEl = document.createElement('span');
       dateEl.className = 'cal-cell__date';
@@ -1017,7 +1087,7 @@
         }
       }
 
-      cell.addEventListener('click', () => openDayModal(dateISO));
+      cell.addEventListener('click', () => (locked ? promptPremium() : openDayModal(dateISO)));
       calGrid.appendChild(cell);
     }
   }
@@ -1492,12 +1562,273 @@
     if (isNativeApp()) {
       // iOS版は当面広告なしで公開する。AdMob SDKの初期化は Android のみ。
       // (iOSで初期化すると GADApplicationIdentifier / ATT 対応が必要になるため)
-      if (platform === 'android') {
+      // プレミアム購入者は広告なし。
+      if (platform === 'android' && !isPremium) {
         initNativeAdMob();
       }
       return;
     }
     showWebAdPlaceholders();
+  }
+
+  // ─── プレミアム / 課金 ──────────────────
+  function loadPremium() {
+    try { return localStorage.getItem(PREMIUM_KEY) === '1'; } catch { return false; }
+  }
+
+  function setPremium(on) {
+    const next = !!on;
+    const changed = next !== isPremium;
+    isPremium = next;
+    try { localStorage.setItem(PREMIUM_KEY, next ? '1' : '0'); } catch (e) {}
+    if (next && nativeAdMob) { try { nativeAdMob.removeBanner(); } catch (e) {} } // 購入で広告を消す(Android)
+    refreshPremiumUI();
+    render();
+    if (changed && next) showToast('プレミアムを解放したよ！', 2200);
+  }
+
+  function freeCutoffISO() {
+    return toISODate(shiftDays(new Date(), -FREE_LOOKBACK_DAYS));
+  }
+
+  function sumByTag(list) {
+    const s = { necessary: 0, enjoy: 0, waste: 0 };
+    for (const e of list) if (s[e.tag] !== undefined) s[e.tag] += e.amount;
+    return s;
+  }
+
+  // 無料操作がロックに当たったら、レポート(=ペイウォール)へ誘導
+  function promptPremium() {
+    if (isPremium) return;
+    setActivePane(3, true);
+  }
+
+  function refreshPremiumUI() {
+    proLock.hidden = isPremium;
+    reportBody.classList.toggle('is-pro-blur', !isPremium);
+    if (premiumStatus) premiumStatus.textContent = isPremium ? '購入済み' : '未購入';
+    if (premiumBuyBtn) premiumBuyBtn.hidden = isPremium;
+    if (premiumRestoreBtn) premiumRestoreBtn.hidden = isPremium;
+    if (recordProCta) recordProCta.hidden = isPremium;
+  }
+
+  function setBillingBusy(busy, msg) {
+    billingBusy = busy;
+    [proBuyBtn, premiumBuyBtn, proRestoreBtn, premiumRestoreBtn].forEach((b) => { if (b) b.disabled = busy; });
+    if (proStatus) {
+      if (busy || msg) { proStatus.hidden = false; proStatus.textContent = msg || '処理中…'; }
+      else { proStatus.hidden = true; proStatus.textContent = ''; }
+    }
+  }
+
+  // cordova-plugin-purchase (v13, グローバル CdvPurchase) をラップ。
+  // 課金は「注文 → approved → verified」まで反映にタイムラグがあるためイベント駆動で扱う。
+  const Billing = (() => {
+    let store = null;
+
+    function syncOwned() {
+      if (!store) return;
+      let owned = false;
+      try {
+        if (typeof store.owned === 'function') owned = store.owned(PREMIUM_PRODUCT_ID);
+        else if (typeof store.get === 'function') {
+          const p = store.get(PREMIUM_PRODUCT_ID);
+          owned = !!(p && p.owned);
+        }
+      } catch (e) { owned = false; }
+      if (owned && !isPremium) setPremium(true);
+    }
+
+    function init() {
+      const cdv = window.CdvPurchase;
+      if (!cdv || !cdv.store) return; // Web/未導入は localStorage キャッシュのまま
+      store = cdv.store;
+      try {
+        const { ProductType, Platform, LogLevel } = cdv;
+        if (LogLevel) store.verbosity = LogLevel.WARNING;
+        store.register([
+          { id: PREMIUM_PRODUCT_ID, type: ProductType.NON_CONSUMABLE, platform: Platform.APPLE_APPSTORE },
+          { id: PREMIUM_PRODUCT_ID, type: ProductType.NON_CONSUMABLE, platform: Platform.GOOGLE_PLAY },
+        ]);
+        store.when()
+          .approved((t) => { try { t.verify(); } catch (e) { try { t.finish(); } catch (e2) {} setPremium(true); setBillingBusy(false); } })
+          .verified((r) => { try { r.finish(); } catch (e) {} setPremium(true); setBillingBusy(false); })
+          .productUpdated(() => syncOwned())
+          .receiptUpdated(() => syncOwned());
+        if (typeof store.error === 'function') {
+          store.error((err) => setBillingBusy(false, `エラー: ${(err && err.message) || ''}`));
+        }
+        if (typeof store.ready === 'function') store.ready(() => syncOwned());
+        store.initialize([Platform.APPLE_APPSTORE, Platform.GOOGLE_PLAY]);
+      } catch (e) { /* SDK差異は無視してキャッシュ状態で継続 */ }
+    }
+
+    function purchase() {
+      if (!store) { showToast('アプリ内で購入できます（準備中）', 2200); return; }
+      if (billingBusy) return;
+      setBillingBusy(true, '処理中…（ストアの応答を待っています）');
+      try {
+        const product = typeof store.get === 'function' ? store.get(PREMIUM_PRODUCT_ID) : null;
+        const offer = product && (product.getOffer ? product.getOffer() : (product.offers && product.offers[0]));
+        if (offer && typeof offer.order === 'function') {
+          Promise.resolve(offer.order()).catch(() => setBillingBusy(false, '購入をキャンセルしました'));
+        } else if (typeof store.order === 'function') {
+          Promise.resolve(store.order(PREMIUM_PRODUCT_ID)).catch(() => setBillingBusy(false, '購入をキャンセルしました'));
+        } else {
+          setBillingBusy(false, '商品を読み込めませんでした。少し待ってからもう一度お試しください');
+        }
+      } catch (e) { setBillingBusy(false, '購入を開始できませんでした'); }
+    }
+
+    function restore() {
+      if (!store) { showToast('アプリ内で復元できます', 2000); return; }
+      if (billingBusy) return;
+      setBillingBusy(true, '復元中…');
+      try {
+        Promise.resolve(store.restorePurchases())
+          .then(() => { syncOwned(); if (isPremium) setBillingBusy(false); else setBillingBusy(false, '購入は見つかりませんでした'); })
+          .catch(() => setBillingBusy(false, '復元に失敗しました'));
+      } catch (e) { setBillingBusy(false, '復元に失敗しました'); }
+    }
+
+    return { init, purchase, restore };
+  })();
+
+  // 課金の初期化 (Billing 定義後に実行)。ストア照会は非同期でタイムラグあり、
+  // 所有が判明した時点で setPremium(true) → 再描画される。
+  Billing.init();
+
+  // Web/PWA (課金の無い環境) 専用の動作確認トグル: 設定「プレミアム」の状態表示を5回タップ
+  function enableDevPremiumToggle() {
+    if (!premiumStatus) return;
+    let taps = 0, timer = null;
+    premiumStatus.addEventListener('click', () => {
+      taps++;
+      clearTimeout(timer);
+      timer = setTimeout(() => { taps = 0; }, 1200);
+      if (taps >= 5) { taps = 0; setPremium(!isPremium); showToast(`(dev) premium=${isPremium}`, 1400); }
+    });
+  }
+
+  // ─── レポート描画 ──────────────────
+  function renderReport() {
+    drawTrendChart();
+    renderBreakdown();
+    renderReportStats();
+  }
+
+  function drawTrendChart() {
+    const canvas = trendChart;
+    if (!canvas || !canvas.getContext) return;
+    const cssW = canvas.clientWidth || 300;
+    const cssH = canvas.clientHeight || 168;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const base = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+      const s = getMonthSums(d.getFullYear(), d.getMonth());
+      months.push({ label: `${d.getMonth() + 1}月`, s, total: s.necessary + s.enjoy + s.waste });
+    }
+    const maxTotal = Math.max(1, ...months.map((x) => x.total));
+
+    const padL = 6, padR = 6, padTop = 12, padBottom = 20;
+    const plotW = cssW - padL - padR;
+    const plotH = cssH - padTop - padBottom;
+    const slot = plotW / months.length;
+    const barW = Math.min(36, slot * 0.56);
+    const baseY = padTop + plotH;
+    const colors = { necessary: '#4a7fb5', enjoy: '#e89b4a', waste: '#8c8c8c' };
+
+    ctx.textAlign = 'center';
+    ctx.font = '11px sans-serif';
+
+    months.forEach((mo, i) => {
+      const cx = padL + slot * i + slot / 2;
+      const h = (mo.total / maxTotal) * plotH;
+      let acc = 0;
+      for (const tag of ['necessary', 'enjoy', 'waste']) {
+        const seg = mo.total ? (mo.s[tag] / mo.total) * h : 0;
+        if (seg > 0.5) {
+          ctx.fillStyle = colors[tag];
+          ctx.fillRect(cx - barW / 2, baseY - acc - seg, barW, seg);
+          acc += seg;
+        }
+      }
+      ctx.fillStyle = '#8c8c8c';
+      ctx.fillText(mo.label, cx, cssH - 6);
+    });
+  }
+
+  function renderBreakdown() {
+    const now = new Date();
+    const s = getMonthSums(now.getFullYear(), now.getMonth());
+    const total = s.necessary + s.enjoy + s.waste;
+    reportBreakdown.innerHTML = '';
+    for (const tag of ['necessary', 'enjoy', 'waste']) {
+      const val = s[tag];
+      const pct = total ? Math.round((val / total) * 100) : 0;
+      const li = document.createElement('li');
+      li.className = 'report__brk';
+      const label = document.createElement('span');
+      label.className = `report__brk-label report__brk-label--${tag}`;
+      label.textContent = TAGS[tag];
+      const track = document.createElement('span');
+      track.className = 'report__brk-track';
+      const fill = document.createElement('span');
+      fill.className = `report__brk-fill report__brk-fill--${tag}`;
+      fill.style.width = `${pct}%`;
+      track.appendChild(fill);
+      const valEl = document.createElement('span');
+      valEl.className = 'report__brk-val';
+      valEl.textContent = `${formatYen(val)}・${pct}%`;
+      li.append(label, track, valEl);
+      reportBreakdown.appendChild(li);
+    }
+  }
+
+  function renderReportStats() {
+    const manual = entries.filter((e) => !e.auto);
+    const total = manual.reduce((s, e) => s + e.amount, 0);
+    let oldest = null;
+    for (const e of manual) if (!oldest || e.date < oldest) oldest = e.date;
+    let monthsCount = 1;
+    if (oldest) {
+      const [oy, om] = oldest.split('-').map(Number);
+      const now = new Date();
+      monthsCount = Math.max(1, (now.getFullYear() - oy) * 12 + (now.getMonth() + 1 - om) + 1);
+    }
+    const avg = Math.round(total / monthsCount);
+    const byTag = sumByTag(manual);
+    const topTag = ['necessary', 'enjoy', 'waste'].reduce((a, b) => (byTag[b] > byTag[a] ? b : a), 'necessary');
+    const days = new Set(manual.map((e) => e.date)).size;
+
+    const stats = [
+      ['ぜんぶの合計', formatYen(total)],
+      ['1ヶ月の平均', formatYen(avg)],
+      ['いちばん多い', total > 0 ? TAGS[topTag] : '—'],
+      ['記録した日数', `${days}日`],
+    ];
+    reportStats.innerHTML = '';
+    for (const [label, val] of stats) {
+      const li = document.createElement('li');
+      li.className = 'report__stat';
+      const l = document.createElement('span');
+      l.className = 'report__stat-label';
+      l.textContent = label;
+      const v = document.createElement('span');
+      v.className = 'report__stat-val';
+      v.textContent = val;
+      li.append(l, v);
+      reportStats.appendChild(li);
+    }
   }
 
   // ─── Service Worker ──────────────────

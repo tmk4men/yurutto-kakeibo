@@ -1,13 +1,13 @@
 // Service Worker — yurutto-kakeibo
 // Cache name のバージョンを上げると古いキャッシュは破棄される。
 // アセットを変更したらこの定数を上げる (例: yurutto-v4 → yurutto-v5)
-const CACHE = 'yurutto-v24';
+const CACHE = 'yurutto-v25';
 
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=23',
-  './app.js?v=24',
+  './style.css?v=24',
+  './app.js?v=25',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

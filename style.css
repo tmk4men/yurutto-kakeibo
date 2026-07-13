@@ -153,7 +153,7 @@ input[type="number"], input[type="date"] {
 
 .panes {
   display: flex;
-  width: 300%;
+  width: 400%;
   height: 100%;
   will-change: transform;
 }
@@ -163,7 +163,7 @@ input[type="number"], input[type="date"] {
 }
 
 .pane {
-  width: 33.3333%;
+  width: 25%;
   flex-shrink: 0;
   height: 100%;
   display: flex;
@@ -1597,3 +1597,153 @@ html.is-native-ad .toast {
     width: calc(100% + 28px);
   }
 }
+
+/* ─── タブ4枚化の微調整 ─── */
+.tab { font-size: 16px; }
+@media (max-width: 360px) { .tab { font-size: 14px; } }
+
+/* ─── レポート ─── */
+.pane--report { position: relative; }
+.report {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.report__card {
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px 14px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.report__h {
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.report__chart {
+  display: block;
+  width: 100%;
+  height: 168px;
+}
+.report__legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.report__leg { display: inline-flex; align-items: center; gap: 5px; }
+.report__leg::before {
+  content: '';
+  width: 10px; height: 10px; border-radius: 3px;
+  display: inline-block;
+}
+.report__leg--necessary::before { background: var(--necessary); }
+.report__leg--enjoy::before { background: var(--enjoy); }
+.report__leg--waste::before { background: var(--waste); }
+
+.report__breakdown { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.report__brk { display: grid; grid-template-columns: 68px 1fr auto; align-items: center; gap: 8px; }
+.report__brk-label { font-size: 14px; }
+.report__brk-label--necessary { color: var(--necessary); }
+.report__brk-label--enjoy { color: var(--enjoy); }
+.report__brk-label--waste { color: var(--waste); }
+.report__brk-track { height: 10px; border-radius: 6px; background: rgba(0,0,0,0.06); overflow: hidden; }
+.report__brk-fill { height: 100%; border-radius: 6px; }
+.report__brk-fill--necessary { background: var(--necessary); }
+.report__brk-fill--enjoy { background: var(--enjoy); }
+.report__brk-fill--waste { background: var(--waste); }
+.report__brk-val { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+.report__stats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.report__stat { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.report__stat-label { color: var(--ink-soft); }
+.report__stat-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ─── プレミアム・ロック ─── */
+.report.is-pro-blur { filter: blur(6px); pointer-events: none; user-select: none; }
+.pro-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(251, 247, 238, 0.55);
+}
+.pro-lock[hidden] { display: none; }
+.pro-lock__inner {
+  background: var(--bg, #fbf7ee);
+  border: 1.5px solid var(--line);
+  border-radius: 18px;
+  padding: 22px 20px;
+  max-width: 320px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+.pro-lock__badge {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--enjoy);
+  border: 1px solid var(--enjoy);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin: 0 0 10px;
+}
+.pro-lock__title { font-size: 19px; margin: 0 0 8px; }
+.pro-lock__desc { font-size: 13px; color: var(--ink-soft); line-height: 1.6; margin: 0 0 16px; }
+.pro-lock__buy {
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: var(--enjoy);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 13px 0;
+  cursor: pointer;
+}
+.pro-lock__buy:disabled { opacity: 0.6; cursor: default; }
+.pro-lock__restore {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  padding: 12px 0 2px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.pro-lock__status { font-size: 12px; color: var(--ink-soft); margin: 8px 0 0; }
+
+/* きろくの解放CTA */
+.pro-cta {
+  border: 1.5px dashed var(--enjoy);
+  border-radius: 12px;
+  background: rgba(232, 155, 74, 0.08);
+  color: var(--enjoy);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 12px;
+  margin: 8px 0 0;
+  cursor: pointer;
+  width: 100%;
+}
+.pro-cta[hidden] { display: none; }
+
+/* 月ナビの無料ロック */
+.month-arrow.is-pro-locked { opacity: 0.28; }
+
+/* カレンダーのロックされた日 */
+.cal-cell.is-pro-locked { opacity: 0.32; }
+.cal-cell.is-pro-locked .cal-cell__amount { visibility: hidden; }

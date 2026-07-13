@@ -33,7 +33,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Klee+One:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=23" />
+  <link rel="stylesheet" href="style.css?v=24" />
 
   <!-- パスワード設定済みなら CSS で本体を即非表示にして覗き見防止 -->
   <script>
@@ -57,6 +57,7 @@
         <button type="button" class="tab is-active" role="tab" aria-selected="true" data-pane="0">書く</button>
         <button type="button" class="tab" role="tab" aria-selected="false" data-pane="1">きろく</button>
         <button type="button" class="tab" role="tab" aria-selected="false" data-pane="2">カレンダー</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" data-pane="3">レポート</button>
       </div>
     </header>
 
@@ -151,6 +152,8 @@
             </div>
           </div>
 
+          <button type="button" class="pro-cta" id="recordProCta" hidden>🔒 全期間の記録と先月比を見る（プレミアム）</button>
+
           <div class="status-bubble is-neutral" id="statusBubble" aria-live="polite">まだ何も書いていないよ</div>
 
           <div class="list-section">
@@ -182,6 +185,43 @@
             <p class="cal-hint">日をタップで内容を見る・なおす<br><span class="cal-hint__auto">空白の日は直近30日の平均で自動入力</span></p>
           </div>
           <aside class="ad-banner" data-ad-pane="calendar" aria-label="広告"></aside>
+        </section>
+
+        <!-- ──── レポートページ ──── -->
+        <section class="pane pane--report" role="tabpanel" aria-label="レポート">
+          <div class="report" id="reportBody">
+            <div class="report__card">
+              <h3 class="report__h">直近6ヶ月の推移</h3>
+              <canvas id="trendChart" class="report__chart" aria-label="月次推移グラフ"></canvas>
+              <div class="report__legend">
+                <span class="report__leg report__leg--necessary">必要</span>
+                <span class="report__leg report__leg--enjoy">楽しみ</span>
+                <span class="report__leg report__leg--waste">ムダかも</span>
+              </div>
+            </div>
+
+            <div class="report__card">
+              <h3 class="report__h">今月の内訳</h3>
+              <ul class="report__breakdown" id="reportBreakdown"></ul>
+            </div>
+
+            <div class="report__card">
+              <h3 class="report__h">ぜんぶの記録</h3>
+              <ul class="report__stats" id="reportStats"></ul>
+            </div>
+          </div>
+
+          <!-- 無料時のロック (プレミアムで解放) -->
+          <div class="pro-lock" id="proLock" hidden>
+            <div class="pro-lock__inner">
+              <p class="pro-lock__badge">プレミアム</p>
+              <h3 class="pro-lock__title">全期間のグラフと分析</h3>
+              <p class="pro-lock__desc">月次の推移グラフ・今月の内訳・ぜんぶの記録の集計。<br>過去の記録もぜんぶ見返せます。</p>
+              <button type="button" class="pro-lock__buy" id="proBuyBtn">プレミアムで解放（¥600）</button>
+              <button type="button" class="pro-lock__restore" id="proRestoreBtn">購入を復元</button>
+              <p class="pro-lock__status" id="proStatus" hidden></p>
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -216,6 +256,15 @@
           <button type="button" class="settings-btn" id="pwSetBtn">設定</button>
           <button type="button" class="settings-btn" id="pwChangeBtn" hidden>変更</button>
           <button type="button" class="settings-btn settings-btn--ghost" id="pwRemoveBtn" hidden>解除</button>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <span class="settings-row__label">プレミアム</span>
+        <span class="settings-row__status" id="premiumStatus">未購入</span>
+        <div class="settings-row__actions">
+          <button type="button" class="settings-btn" id="premiumBuyBtn">購入</button>
+          <button type="button" class="settings-btn settings-btn--ghost" id="premiumRestoreBtn">復元</button>
         </div>
       </div>
 
@@ -272,6 +321,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=24"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>
