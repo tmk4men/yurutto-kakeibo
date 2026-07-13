@@ -234,6 +234,15 @@
     // 横スワイプ
     bindSwipe();
 
+    // 画面回転/リサイズ時、レポート表示中ならグラフを描き直す
+    let resizeTimer = null;
+    const onResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { if (activePane === 3) renderReport(); }, 150);
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+
     // ヒントを画面のどこか別場所をタップしたら隠す
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.tag')) hideHint();
@@ -517,6 +526,7 @@
       t.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     if (idx !== 0) hideHint();
+    if (idx === 3) renderReport(); // グラフを現在サイズで描き直す
     showBannerForPane(idx);
   }
 

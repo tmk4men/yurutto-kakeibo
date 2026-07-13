@@ -74,6 +74,6 @@ iOSは起動クラッシュで却下が続いている（Guideline 2.1a）。**�
   ```
   ヒット＝AdMob混入確定（これがクラッシュ真因）。ヒット無し＝dSYMでsymbolicateして別真因を特定。
 - **クリーン再ビルド**：Xcode全終了→`rm -rf ~/Library/Developer/Xcode/DerivedData/*`＋SPMキャッシュ/`Package.resolved`削除→`npm run copy-web`→`npx cap sync ios`→Reset Package Caches＋Clean Build Folder→`capacitor-swift-pm`だけ確認→アーカイブ後に再度 strings で混入無し確認→**iPad実機/シミュレータで起動確認**→提出。
-- ビルド番号は消化済みの2・3が使えないため**4以上**。App Store Connectのバージョンは現在ビルド2選択のまま＝修正版が一度も審査に出ていない可能性（バージョン番号1.1で作ると1.0の下に出ず選べない点にも注意）。
+- ビルド番号は消化済みの2・3が使えないため**4以上**。→ **`project.pbxproj` の `CURRENT_PROJECT_VERSION` は既に 4 に設定済み（`MARKETING_VERSION` は 1.0 のまま）**。これで次のアーカイブは 1.0(4) となり、App Store Connect の「1.0 for iOS」に紐づけ・選択できる（1.1で作ると1.0の下に出ず選べないので1.0を維持）。現在ASCはビルド2選択のまま＝修正版が一度も審査に出ていない状態。
 
 **課金を乗せる前に、この起動クラッシュを先に潰す。** 落ちる土台に課金を積んでも審査は通らない。詳細は `HANDOFF.md` とメモリ [[kakeibo-release-status]]。
