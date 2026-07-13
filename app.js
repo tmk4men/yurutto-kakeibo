@@ -6,6 +6,11 @@
   const PREMIUM_KEY = 'kakeibo.premium'; // '1' なら購入済み (エンタイトルメント・キャッシュ)
   const PREMIUM_PRODUCT_ID = 'com.tmk4men.yuruttokakeibo.premium'; // 非消費型 買い切り
   const FREE_LOOKBACK_DAYS = 14;         // 無料は直近2週間だけ閲覧できる
+  // 課金(IAP)のキルスイッチ。true=課金ON（ペイウォール/購入UIを表示）。
+  // ★重要: 購入が"実際に動く"状態（プラグイン導入＋ストア商品登録＋有料App契約）でのみ true にすること。
+  //   まだ動かないのに true で審査に出すと「機能しない購入UI」でリジェクトされる。
+  // false にすると全機能無料・購入UIを完全非表示（IAPが壊れた時の緊急ホットフィックス用）。
+  const IAP_ENABLED = true;
   const PASS_KEY = 'kakeibo.passhash';   // SHA-256(salt+code) hex string
   const PASS_SALT = 'yurutto-2026';      // 単純な辞書攻撃を防ぐ程度のソルト
   const PASS_LENGTH = 4;
@@ -60,7 +65,8 @@
   let lockSetupTemp = '';
   let lockOnSuccess = null;
   let dayModalDate = null;    // 編集モーダルで開いている日付 'YYYY-MM-DD'
-  let isPremium = loadPremium(); // 買い切りプレミアムの有効状態 (localStorageキャッシュ + ストア照会)
+  let isPremium = IAP_ENABLED ? loadPremium() : true; // 課金OFF時は全機能アンロック
+
   let billingBusy = false;    // 購入/復元の処理中フラグ (課金は反映までタイムラグあり)
 
   // ─── DOM ──────────────────
@@ -139,6 +145,7 @@
   const proStatus = document.getElementById('proStatus');
   const recordProCta = document.getElementById('recordProCta');
   const premiumStatus = document.getElementById('premiumStatus');
+  const premiumSettingsRow = document.getElementById('premiumSettingsRow');
   const premiumBuyBtn = document.getElementById('premiumBuyBtn');
   const premiumRestoreBtn = document.getElementById('premiumRestoreBtn');
 
@@ -304,6 +311,9 @@
     // Web/PWA (課金の無い環境) では動作確認用に購入状態を切り替えられる隠し操作:
     // 設定の「プレミアム」ラベルを5回タップ
     if (!isNativeApp()) enableDevPremiumToggle();
+
+    // 課金OFF時は購入UIを完全に隠す (設定のプレミアム行も含む)
+    if (!IAP_ENABLED && premiumSettingsRow) premiumSettingsRow.hidden = true;
 
     refreshPremiumUI();
     // Billing.init() は Billing 定義後 (ファイル末尾) で呼ぶ (const の TDZ 回避)
@@ -1572,8 +1582,8 @@
     if (isNativeApp()) {
       // iOS版は当面広告なしで公開する。AdMob SDKの初期化は Android のみ。
       // (iOSで初期化すると GADApplicationIdentifier / ATT 対応が必要になるため)
-      // プレミアム購入者は広告なし。
-      if (platform === 'android' && !isPremium) {
+      // プレミアム購入者は広告なし。課金OFF時は誰も購入者でないので広告は出す。
+      if (platform === 'android' && !(IAP_ENABLED && isPremium)) {
         initNativeAdMob();
       }
       return;
