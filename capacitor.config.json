@@ -6,6 +6,8 @@
     "androidScheme": "https"
   },
   "ios": {
-    "includePlugins": []
+    "includePlugins": [
+      "cordova-plugin-purchase"
+    ]
   }
 }

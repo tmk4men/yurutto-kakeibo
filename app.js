@@ -1645,18 +1645,41 @@
   // 課金は「注文 → approved → verified」まで反映にタイムラグがあるためイベント駆動で扱う。
   const Billing = (() => {
     let store = null;
+    let ErrorCode = null;   // cdv.ErrorCode（キャンセル判定に使用）
+    let pending = false;    // 購入注文を出して結果待ちか
+    let watchdog = null;    // 応答が来ない時のフォールバック用タイマー
+
+    // 購入完了は approved→verified の「イベント」で確定する。order() の戻り値や
+    // 一時的な store.error では確定させない（タイムラグで後から通ることがあるため）。
+    const WATCHDOG_MS = 45000;
+
+    function clearWatchdog() { if (watchdog) { clearTimeout(watchdog); watchdog = null; } }
+    function startWatchdog() {
+      clearWatchdog();
+      watchdog = setTimeout(() => {
+        watchdog = null;
+        if (!pending) return;
+        // まだ確定していない。失敗とは断定せず、待てば反映される旨だけ伝えて操作可能に戻す。
+        pending = false;
+        setBillingBusy(false, '通信に時間がかかっています。購入が完了すると自動で反映されます');
+      }, WATCHDOG_MS);
+    }
+    function settle(msg) { clearWatchdog(); pending = false; setBillingBusy(false, msg); }
+    function unlock() { clearWatchdog(); pending = false; setPremium(true); setBillingBusy(false); }
+    function isCancel(err) {
+      return !!(err && ErrorCode != null && err.code === ErrorCode.PAYMENT_CANCELLED);
+    }
 
     function syncOwned() {
       if (!store) return;
       let owned = false;
       try {
-        if (typeof store.owned === 'function') owned = store.owned(PREMIUM_PRODUCT_ID);
-        else if (typeof store.get === 'function') {
-          const p = store.get(PREMIUM_PRODUCT_ID);
-          owned = !!(p && p.owned);
-        }
+        // v13: Product.owned ゲッターが最も確実。store.owned は文字列でなく {id} を取る。
+        const p = typeof store.get === 'function' ? store.get(PREMIUM_PRODUCT_ID) : null;
+        if (p && typeof p.owned === 'boolean') owned = p.owned;
+        else if (typeof store.owned === 'function') owned = store.owned({ id: PREMIUM_PRODUCT_ID });
       } catch (e) { owned = false; }
-      if (owned && !isPremium) setPremium(true);
+      if (owned && !isPremium) unlock();
     }
 
     function init() {
@@ -1665,21 +1688,38 @@
       store = cdv.store;
       try {
         const { ProductType, Platform, LogLevel } = cdv;
+        ErrorCode = cdv.ErrorCode || null;
         if (LogLevel) store.verbosity = LogLevel.WARNING;
-        store.register([
-          { id: PREMIUM_PRODUCT_ID, type: ProductType.NON_CONSUMABLE, platform: Platform.APPLE_APPSTORE },
-          { id: PREMIUM_PRODUCT_ID, type: ProductType.NON_CONSUMABLE, platform: Platform.GOOGLE_PLAY },
-        ]);
+
+        // 動作中のプラットフォームだけを初期化する（iOSでGooglePlayアダプタを初期化すると
+        // 初期化エラーがペイウォールに出てしまうため）。判定不能時は両方にフォールバック。
+        const cap = window.Capacitor;
+        const pf = cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : '';
+        let platforms;
+        if (pf === 'ios') platforms = [Platform.APPLE_APPSTORE];
+        else if (pf === 'android') platforms = [Platform.GOOGLE_PLAY];
+        else platforms = [Platform.APPLE_APPSTORE, Platform.GOOGLE_PLAY];
+
+        store.register(platforms.map((platform) => (
+          { id: PREMIUM_PRODUCT_ID, type: ProductType.NON_CONSUMABLE, platform }
+        )));
+
         store.when()
-          .approved((t) => { try { t.verify(); } catch (e) { try { t.finish(); } catch (e2) {} setPremium(true); setBillingBusy(false); } })
-          .verified((r) => { try { r.finish(); } catch (e) {} setPremium(true); setBillingBusy(false); })
+          .approved((t) => { try { t.verify(); } catch (e) { try { t.finish(); } catch (e2) {} unlock(); } })
+          .verified((r) => { try { r.finish(); } catch (e) {} unlock(); })
           .productUpdated(() => syncOwned())
           .receiptUpdated(() => syncOwned());
+
         if (typeof store.error === 'function') {
-          store.error((err) => setBillingBusy(false, `エラー: ${(err && err.message) || ''}`));
+          store.error((err) => {
+            // キャンセルだけは即座に反映。それ以外の（初期化時・一時的な）エラーは
+            // UIに出さない — approved/verified か watchdog に確定を委ねる。
+            if (isCancel(err)) { settle('購入をキャンセルしました'); }
+          });
         }
+
         if (typeof store.ready === 'function') store.ready(() => syncOwned());
-        store.initialize([Platform.APPLE_APPSTORE, Platform.GOOGLE_PLAY]);
+        store.initialize(platforms);
       } catch (e) { /* SDK差異は無視してキャッシュ状態で継続 */ }
     }
 
@@ -1687,17 +1727,24 @@
       if (!store) { showToast('アプリ内で購入できます（準備中）', 2200); return; }
       if (billingBusy) return;
       setBillingBusy(true, '処理中…（ストアの応答を待っています）');
+      pending = true;
+      startWatchdog();
       try {
         const product = typeof store.get === 'function' ? store.get(PREMIUM_PRODUCT_ID) : null;
         const offer = product && (product.getOffer ? product.getOffer() : (product.offers && product.offers[0]));
+        // v13: 購入は Offer.order()。store.order は Offer を取る（商品IDの文字列では動かない）。
         if (offer && typeof offer.order === 'function') {
-          Promise.resolve(offer.order()).catch(() => setBillingBusy(false, '購入をキャンセルしました'));
-        } else if (typeof store.order === 'function') {
-          Promise.resolve(store.order(PREMIUM_PRODUCT_ID)).catch(() => setBillingBusy(false, '購入をキャンセルしました'));
+          Promise.resolve(offer.order()).then((err) => {
+            // order() は例外ではなく IError を「解決値」で返す。キャンセルのみ即終了。
+            // その他のエラーは失敗と断定しない（approved/verified が後から来ることがある）。
+            if (isCancel(err)) settle('購入をキャンセルしました');
+          }).catch(() => { /* 例外時も即失敗にしない。watchdog に委ねる */ });
         } else {
-          setBillingBusy(false, '商品を読み込めませんでした。少し待ってからもう一度お試しください');
+          // 商品がまだ読めていない。再照会を促してユーザーに少し待ってもらう。
+          if (typeof store.update === 'function') { try { store.update(); } catch (e) {} }
+          settle('商品を読み込めませんでした。少し待ってからもう一度お試しください');
         }
-      } catch (e) { setBillingBusy(false, '購入を開始できませんでした'); }
+      } catch (e) { settle('購入を開始できませんでした'); }
     }
 
     function restore() {
@@ -1706,7 +1753,7 @@
       setBillingBusy(true, '復元中…');
       try {
         Promise.resolve(store.restorePurchases())
-          .then(() => { syncOwned(); if (isPremium) setBillingBusy(false); else setBillingBusy(false, '購入は見つかりませんでした'); })
+          .then(() => { syncOwned(); setBillingBusy(false, isPremium ? '' : '購入は見つかりませんでした'); })
           .catch(() => setBillingBusy(false, '復元に失敗しました'));
       } catch (e) { setBillingBusy(false, '復元に失敗しました'); }
     }
