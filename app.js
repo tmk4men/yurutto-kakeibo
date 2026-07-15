@@ -1648,6 +1648,7 @@
     let ErrorCode = null;   // cdv.ErrorCode（キャンセル判定に使用）
     let pending = false;    // 購入注文を出して結果待ちか
     let watchdog = null;    // 応答が来ない時のフォールバック用タイマー
+    let wantsPurchase = false; // 商品未ロード中に購入を押された→ロード完了で自動発注する意思
 
     // 購入完了は approved→verified の「イベント」で確定する。order() の戻り値や
     // 一時的な store.error では確定させない（タイムラグで後から通ることがあるため）。
@@ -1661,13 +1662,38 @@
         if (!pending) return;
         // まだ確定していない。失敗とは断定せず、待てば反映される旨だけ伝えて操作可能に戻す。
         pending = false;
+        wantsPurchase = false;
         setBillingBusy(false, '通信に時間がかかっています。購入が完了すると自動で反映されます');
       }, WATCHDOG_MS);
     }
-    function settle(msg) { clearWatchdog(); pending = false; setBillingBusy(false, msg); }
-    function unlock() { clearWatchdog(); pending = false; setPremium(true); setBillingBusy(false); }
+    function settle(msg) { clearWatchdog(); pending = false; wantsPurchase = false; setBillingBusy(false, msg); }
+    function unlock() { clearWatchdog(); pending = false; wantsPurchase = false; setPremium(true); setBillingBusy(false); }
     function isCancel(err) {
       return !!(err && ErrorCode != null && err.code === ErrorCode.PAYMENT_CANCELLED);
+    }
+
+    // v13: 商品→オファーを取得（未ロード時は null）。
+    function getOffer() {
+      if (!store || typeof store.get !== 'function') return null;
+      const product = store.get(PREMIUM_PRODUCT_ID);
+      if (!product) return null;
+      return (product.getOffer ? product.getOffer() : (product.offers && product.offers[0])) || null;
+    }
+    function placeOrder(offer) {
+      // order() は例外でなく IError を「解決値」で返す。キャンセルのみ即終了。
+      // その他のエラーは失敗と断定しない（approved/verified が後から来ることがある）。
+      Promise.resolve(offer.order())
+        .then((err) => { if (isCancel(err)) settle('購入をキャンセルしました'); })
+        .catch(() => { /* 例外時も即失敗にしない。watchdog に委ねる */ });
+    }
+    // 商品ロード前に購入を押された場合、ロード完了イベントでここが呼ばれ自動発注する。
+    function flushPendingOrder() {
+      if (!wantsPurchase) return;
+      const offer = getOffer();
+      if (offer && typeof offer.order === 'function') {
+        wantsPurchase = false;
+        placeOrder(offer);
+      }
     }
 
     function syncOwned() {
@@ -1707,7 +1733,7 @@
         store.when()
           .approved((t) => { try { t.verify(); } catch (e) { try { t.finish(); } catch (e2) {} unlock(); } })
           .verified((r) => { try { r.finish(); } catch (e) {} unlock(); })
-          .productUpdated(() => syncOwned())
+          .productUpdated(() => { syncOwned(); flushPendingOrder(); })
           .receiptUpdated(() => syncOwned());
 
         if (typeof store.error === 'function') {
@@ -1718,7 +1744,7 @@
           });
         }
 
-        if (typeof store.ready === 'function') store.ready(() => syncOwned());
+        if (typeof store.ready === 'function') store.ready(() => { syncOwned(); flushPendingOrder(); });
         store.initialize(platforms);
       } catch (e) { /* SDK差異は無視してキャッシュ状態で継続 */ }
     }
@@ -1730,19 +1756,17 @@
       pending = true;
       startWatchdog();
       try {
-        const product = typeof store.get === 'function' ? store.get(PREMIUM_PRODUCT_ID) : null;
-        const offer = product && (product.getOffer ? product.getOffer() : (product.offers && product.offers[0]));
         // v13: 購入は Offer.order()。store.order は Offer を取る（商品IDの文字列では動かない）。
+        const offer = getOffer();
         if (offer && typeof offer.order === 'function') {
-          Promise.resolve(offer.order()).then((err) => {
-            // order() は例外ではなく IError を「解決値」で返す。キャンセルのみ即終了。
-            // その他のエラーは失敗と断定しない（approved/verified が後から来ることがある）。
-            if (isCancel(err)) settle('購入をキャンセルしました');
-          }).catch(() => { /* 例外時も即失敗にしない。watchdog に委ねる */ });
+          placeOrder(offer);
         } else {
-          // 商品がまだ読めていない。再照会を促してユーザーに少し待ってもらう。
+          // 商品がまだ読み込めていない（初期化直後にタップされた等）。
+          // ここで「失敗」にすると審査員が早押ししただけで購入不可に見える → 2.1b。
+          // 失敗にせず購入意思を保持し、productUpdated/ready で自動発注する（watchdog が安全網）。
+          wantsPurchase = true;
+          setBillingBusy(true, '処理中…（商品を確認しています）');
           if (typeof store.update === 'function') { try { store.update(); } catch (e) {} }
-          settle('商品を読み込めませんでした。少し待ってからもう一度お試しください');
         }
       } catch (e) { settle('購入を開始できませんでした'); }
     }
