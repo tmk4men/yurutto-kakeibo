@@ -189,7 +189,8 @@
 
         <!-- ──── レポートページ ──── -->
         <section class="pane pane--report" role="tabpanel" aria-label="レポート">
-          <div class="report" id="reportBody">
+          <!-- 初期状態はロック(フェイルクローズド)。購入済みと確認できたときだけ JS が解除する -->
+          <div class="report is-pro-blur" id="reportBody">
             <div class="report__card">
               <h3 class="report__h">直近6ヶ月の推移</h3>
               <canvas id="trendChart" class="report__chart" aria-label="月次推移グラフ"></canvas>
@@ -211,8 +212,8 @@
             </div>
           </div>
 
-          <!-- 無料時のロック (プレミアムで解放) -->
-          <div class="pro-lock" id="proLock" hidden>
+          <!-- 無料時のロック (プレミアムで解放)。初期表示=ロック。購入済みなら JS が hidden にする -->
+          <div class="pro-lock" id="proLock">
             <div class="pro-lock__inner">
               <p class="pro-lock__badge">プレミアム</p>
               <h3 class="pro-lock__title">全期間のグラフと分析</h3>
