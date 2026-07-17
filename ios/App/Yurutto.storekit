@@ -1,0 +1,38 @@
+{
+  "identifier" : "A1B2C3D4-0001-4E5F-9A8B-7C6D5E4F3A21",
+  "nonRenewingSubscriptions" : [
+  ],
+  "products" : [
+    {
+      "displayPrice" : "600",
+      "familyShareable" : false,
+      "internalID" : "A1B2C3D4-0002-4E5F-9A8B-7C6D5E4F3A22",
+      "localizations" : [
+        {
+          "description" : "全期間のグラフと分析、先月比、全月の閲覧を解放します。",
+          "displayName" : "プレミアム",
+          "locale" : "ja"
+        }
+      ],
+      "productID" : "com.tmk4men.yuruttokakeibo.premium",
+      "referenceName" : "プレミアム (買い切り)",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "ja_JP",
+    "_storefront" : "JPN",
+    "_storeKitErrors" : [
+    ]
+  },
+  "subscriptionGroups" : [
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

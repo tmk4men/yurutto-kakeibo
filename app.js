@@ -1731,7 +1731,10 @@
         )));
 
         store.when()
-          .approved((t) => { try { t.verify(); } catch (e) { try { t.finish(); } catch (e2) {} unlock(); } })
+          // verify() が失敗しても解放しない。以前はここで unlock() していたため
+          // 「検証できない = 解放」になっていた（validator 未設定なので事実上の常時解放）。
+          // 解放は verified イベントか、レシート由来の owned 判定 (syncOwned) のみに任せる。
+          .approved((t) => { try { t.verify(); } catch (e) { try { t.finish(); } catch (e2) {} } })
           .verified((r) => { try { r.finish(); } catch (e) {} unlock(); })
           .productUpdated(() => { syncOwned(); flushPendingOrder(); })
           .receiptUpdated(() => syncOwned());
