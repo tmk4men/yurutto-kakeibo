@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "copy-web": "node scripts/copy-web.js",
-    "sync": "npm run copy-web && cap sync",
+    "verify-sync": "node scripts/verify-sync.js",
+    "sync": "npm run copy-web && cap sync && npm run verify-sync",
     "open:android": "cap open android",
     "open:ios": "cap open ios"
   },
