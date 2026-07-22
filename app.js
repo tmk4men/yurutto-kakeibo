@@ -32,13 +32,18 @@
   const AUTO_LOOKBACK_DAYS = 30; // 直近30日から平均を取り、過去30日の空白日を埋める
   const DOW_KANJI = ['日', '月', '火', '水', '木', '金', '土'];
 
-  // Google AdMob (Android アプリ) — Web版はプレースホルダ表示
+  // Google AdMob (Android / iOS アプリ) — Web版はプレースホルダ表示
   const ADMOB_CONFIG = {
-    // タブごとのバナー広告ユニットID (0=書く, 1=きろく, 2=カレンダー)
-    bannerIds: [
+    // タブごとのバナー広告ユニットID (0=書く, 1=きろく, 2=カレンダー) — プラットフォーム別
+    bannerIdsAndroid: [
       'ca-app-pub-5634961953346923/6932288160', // 書く
       'ca-app-pub-5634961953346923/2816130946', // きろく (家計簿2)
       'ca-app-pub-5634961953346923/3498657223', // カレンダー (家計簿3)
+    ],
+    bannerIdsIos: [
+      'ca-app-pub-2783540275927131/6126527828', // 書く
+      'ca-app-pub-2783540275927131/2844657316', // きろく
+      'ca-app-pub-2783540275927131/7905412309', // カレンダー
     ],
     // 診断用: true にすると Google公式テスト広告IDで動作確認できる（必ず広告が出る）
     useTestAd: false,
@@ -1498,7 +1503,8 @@
 
     try {
       adDiag('[AD] calling initialize');
-      await AdMob.initialize();
+      // iOS: requestTrackingAuthorization=true で ATT ダイアログを表示（Androidでは無視される）。
+      await AdMob.initialize({ requestTrackingAuthorization: true });
 
       try {
         const consentInfo = await AdMob.requestConsentInfo();
@@ -1538,12 +1544,16 @@
   // IDを変えるには一度バナーを消して再表示する必要がある。
   async function showBannerForPane(idx) {
     if (!nativeAdMob) return; // 初期化前 / Web は何もしない
+    // プレミアム購入者は広告なし。購入後にタブを切り替えても再表示しない。
+    if (IAP_ENABLED && isPremium) { try { await nativeAdMob.removeBanner(); } catch (e) {} return; }
     if (idx === currentBannerPane) return; // 同じタブなら貼り替え不要
     if (bannerBusy) { pendingBannerPane = idx; return; } // 連続スワイプは最後だけ反映
 
     bannerBusy = true;
     currentBannerPane = idx;
-    const ids = ADMOB_CONFIG.bannerIds;
+    const cap = window.Capacitor;
+    const pf = cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : '';
+    const ids = pf === 'ios' ? ADMOB_CONFIG.bannerIdsIos : ADMOB_CONFIG.bannerIdsAndroid;
     const adId = ADMOB_CONFIG.useTestAd
       ? ADMOB_CONFIG.testBannerId
       : (ids[idx] || ids[0]);
@@ -1580,10 +1590,11 @@
     const platform = cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : 'web';
     adDiag(`[AD] initAds cap=${!!cap} native=${!!(cap && cap.isNativePlatform && cap.isNativePlatform())} platform=${platform}`);
     if (isNativeApp()) {
-      // iOS版は当面広告なしで公開する。AdMob SDKの初期化は Android のみ。
-      // (iOSで初期化すると GADApplicationIdentifier / ATT 対応が必要になるため)
+      // Android / iOS どちらもバナー広告を表示する。
+      // iOSは Info.plist の GADApplicationIdentifier / SKAdNetworkItems /
+      // NSUserTrackingUsageDescription と ATT リクエストが前提（対応済み）。
       // プレミアム購入者は広告なし。課金OFF時は誰も購入者でないので広告は出す。
-      if (platform === 'android' && !(IAP_ENABLED && isPremium)) {
+      if ((platform === 'android' || platform === 'ios') && !(IAP_ENABLED && isPremium)) {
         initNativeAdMob();
       }
       return;
@@ -1601,7 +1612,7 @@
     const changed = next !== isPremium;
     isPremium = next;
     try { localStorage.setItem(PREMIUM_KEY, next ? '1' : '0'); } catch (e) {}
-    if (next && nativeAdMob) { try { nativeAdMob.removeBanner(); } catch (e) {} } // 購入で広告を消す(Android)
+    if (next && nativeAdMob) { try { nativeAdMob.removeBanner(); } catch (e) {} } // 購入で広告を消す(Android/iOS)
     refreshPremiumUI();
     render();
     if (changed && next) showToast('プレミアムを解放したよ！', 2200);
